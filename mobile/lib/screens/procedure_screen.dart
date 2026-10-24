@@ -15,16 +15,16 @@ class _ProcedureScreenState extends State<ProcedureScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final count = purifierInspection.length;
+    final count = laptopInspection.length;
     final complete = _stepIndex == count;
     final step = complete
         ? const InspectionStep(
             'Walkthrough complete',
             'Steps reviewed manually. Camera verification is not connected.',
           )
-        : purifierInspection[_stepIndex];
+        : laptopInspection[_stepIndex];
     return Scaffold(
-      appBar: AppBar(title: const Text('HEPA inspection')),
+      appBar: AppBar(title: const Text('Laptop inspection')),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [

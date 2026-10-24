@@ -6,15 +6,15 @@ final class InspectionStep {
   final String detail;
 }
 
-// Demo steps until we have the purifier's model-specific procedure.
-const purifierInspection = <InspectionStep>[
+// Demo steps until we choose the laptop model and repair procedure.
+const laptopInspection = <InspectionStep>[
   InspectionStep(
-    'Identify equipment',
-    'Check the model label and match it to the purifier manual.',
+    'Identify laptop',
+    'Match the laptop model to its service manual.',
   ),
   InspectionStep(
     'Inspect exterior',
-    'Look over the housing for visible damage or blocked vents.',
+    'Check the case, ports, and hinges for visible damage.',
   ),
   InspectionStep(
     'Review observations',

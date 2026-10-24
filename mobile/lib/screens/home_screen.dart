@@ -17,8 +17,8 @@ class HomeScreen extends StatelessWidget {
           SizedBox(height: 20),
           Card(
             child: ListTile(
-              leading: Icon(Icons.air),
-              title: Text('HEPA air purifier'),
+              leading: Icon(Icons.laptop),
+              title: Text('Laptop'),
               subtitle: Text('Guided inspection'),
               onTap: () => Navigator.push(
                 context,

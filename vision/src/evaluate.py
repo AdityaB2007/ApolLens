@@ -1,1 +1,1 @@
-# Eric: Evaluate component detections on held-out footage and measure prediction speed.
+# Gavin and Aditya: Write Python evaluation code for held-out footage and prediction speed.

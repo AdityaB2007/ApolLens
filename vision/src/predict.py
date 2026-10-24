@@ -1,1 +1,1 @@
-# Eric: Load trained weights and return component labels, bounding boxes, and tracking results.
+# Gavin and Aditya: Write Python inference code to load trained weights and return detections and tracking results.

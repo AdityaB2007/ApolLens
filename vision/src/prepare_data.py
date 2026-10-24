@@ -1,1 +1,1 @@
-# Eric: Prepare purifier images and labels, keeping separate recordings for training and evaluation.
+# Gavin and Aditya: Write Python data preparation and dataset splitting for the training workflow.

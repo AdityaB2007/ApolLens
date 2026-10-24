@@ -1,3 +1,5 @@
+# Gavin - Flutter package setup.
+# SDK, dependencies, and Material icons for the mobile app.
 name: apollens
 publish_to: none
 version: 0.1.0+1

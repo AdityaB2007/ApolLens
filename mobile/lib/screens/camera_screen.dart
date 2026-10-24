@@ -11,6 +11,35 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   CameraController? _camera;
+  String _status = 'Starting camera…';
+
+  @override
+  void initState() {
+    super.initState();
+    _openCamera();
+  }
+
+  Future<void> _openCamera() async {
+    try {
+      final cameras = await availableCameras();
+      if (!mounted) return;
+      if (cameras.isEmpty) {
+        throw CameraException('NoCamera', 'No camera found.');
+      }
+      final camera = CameraController(
+        cameras.first,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
+      _camera = camera;
+      await camera.initialize();
+      if (mounted) setState(() {});
+    } catch (_) {
+      if (mounted) {
+        setState(() => _status = 'Camera unavailable. Check camera access.');
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -23,6 +52,6 @@ class _CameraScreenState extends State<CameraScreen> {
     final camera = _camera;
     return camera?.value.isInitialized == true
         ? CameraPreview(camera!)
-        : const Center(child: Text('Camera is not connected.'));
+        : Center(child: Text(_status));
   }
 }

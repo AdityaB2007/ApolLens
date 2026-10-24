@@ -11,6 +11,28 @@ final class AudioPlayback {
   Future<void>? _closing;
   int _generation = 0;
 
+  PlayerState get state => _player.state;
+  Stream<PlayerState> get states => _player.onPlayerStateChanged;
+
+  Future<void> pause() {
+    final generation = ++_generation;
+    return _run(() async {
+      if (generation == _generation && _player.state == PlayerState.playing) {
+        await _player.pause();
+      }
+    });
+  }
+
+  Future<void> resume() {
+    final generation = _generation;
+    return _run(() async {
+      // Resume belongs to the paused instruction, never a replacement.
+      if (generation == _generation && _player.state == PlayerState.paused) {
+        await _player.resume();
+      }
+    });
+  }
+
   Future<void> play(Uint8List bytes) {
     final generation = ++_generation;
     return _run(() async {

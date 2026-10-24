@@ -1,6 +1,8 @@
 // Gavin - App entry point and theme.
 // Starts the Flutter interface for ApolLens.
 import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'models/recognition_state.dart';
 
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
@@ -20,6 +22,7 @@ class ApolLensApp extends StatefulWidget {
     this.createPlayback,
     this.lookupProcedure,
     this.writeSession,
+    this.recognition,
   });
 
   // The app owns this configured client. No client means text-only guidance.
@@ -27,6 +30,7 @@ class ApolLensApp extends StatefulWidget {
   final AudioPlayback Function()? createPlayback;
   final ProcedureLookup? lookupProcedure;
   final SessionWriter? writeSession;
+  final ValueListenable<RecognitionState>? recognition;
 
   @override
   State<ApolLensApp> createState() => _ApolLensAppState();
@@ -105,7 +109,10 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
         scaffoldBackgroundColor: const Color(0xFFF4F3EF),
       ),
       home: HomeScreen(
-          speech: _speech, procedures: _procedures, sessions: _sessions),
+          speech: _speech,
+          procedures: _procedures,
+          sessions: _sessions,
+          recognition: widget.recognition),
     );
   }
 }

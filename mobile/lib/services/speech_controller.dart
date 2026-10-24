@@ -15,9 +15,28 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
   final AudioPlayback _playback;
   int _generation = 0;
   bool _disposed = false;
+  String? _text;
+
+  String? get text => _text;
+
+  Future<void> replay() => _text == null ? Future.value() : speak(_text!);
+
+  Future<void> stop({bool clear = false}) async {
+    if (_disposed) return;
+    final generation = ++_generation;
+    // Clear the instruction when leaving its procedure or item.
+    if (clear) _text = null;
+    try {
+      await _playback.stop();
+      if (!_disposed && generation == _generation) value = SpeechStatus.idle;
+    } catch (_) {
+      if (!_disposed && generation == _generation) value = SpeechStatus.failed;
+    }
+  }
 
   Future<void> speak(String text) async {
     if (_disposed) return;
+    _text = text;
     final generation = ++_generation;
     try {
       await _playback.stop();

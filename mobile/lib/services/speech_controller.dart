@@ -1,6 +1,7 @@
 // Gavin - Connect ApolLens instruction text to spoken guidance.
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
 import 'audio_playback.dart';
@@ -26,6 +27,27 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
     _muted = muted;
     // Unmuting waits for an explicit replay or the next instruction.
     await stop();
+  }
+
+  Future<void> setPaused(bool paused) async {
+    if (_disposed || _muted) return;
+    // Pausing during loading cancels that instruction's pending playback.
+    if (value == SpeechStatus.loading) {
+      if (paused) await stop();
+      return;
+    }
+    final generation = ++_generation;
+    try {
+      await (paused ? _playback.pause() : _playback.resume());
+      if (_disposed || generation != _generation) return;
+      value = switch (_playback.state) {
+        PlayerState.playing => SpeechStatus.playing,
+        PlayerState.paused => SpeechStatus.paused,
+        _ => SpeechStatus.idle,
+      };
+    } catch (_) {
+      if (!_disposed && generation == _generation) value = SpeechStatus.failed;
+    }
   }
 
   Future<void> replay() => _text == null ? Future.value() : speak(_text!);

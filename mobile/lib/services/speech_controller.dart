@@ -12,11 +12,15 @@ enum SpeechStatus { idle, loading, playing, paused, muted, failed }
 final class SpeechController extends ValueNotifier<SpeechStatus> {
   SpeechController(this._audio, this._playback) : super(SpeechStatus.idle) {
     _states = _playback.states.listen(_onPlaybackState);
+    _events = _playback.events.listen((_) {}, onError: _onPlaybackError);
   }
 
   final AudioService _audio;
   final AudioPlayback _playback;
   late final StreamSubscription<PlayerState> _states;
+  late final StreamSubscription<AudioEvent> _events;
+  bool _acceptErrors = false;
+  Completer<void>? _request;
   int _generation = 0;
   bool _disposed = false;
   String? _text;
@@ -35,8 +39,27 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
     // Queued events must still describe the current active audio.
     if (_disposed || _muted || state != _playback.state) return;
     if (value == SpeechStatus.playing || value == SpeechStatus.paused) {
+      if (_playbackStatus == SpeechStatus.idle) _acceptErrors = false;
       value = _playbackStatus;
     }
+  }
+
+  void _cancelRequest() {
+    final request = _request;
+    _request = null;
+    if (request != null && !request.isCompleted) request.complete();
+  }
+
+  void _onPlaybackError(Object error) {
+    if (_disposed || _muted || !_acceptErrors) return;
+    if (value == SpeechStatus.idle) return;
+    _acceptErrors = false;
+    _cancelRequest();
+    _generation++;
+    // Invalidate playback before notifying listeners that might retry.
+    final stopped = _playback.stop();
+    value = SpeechStatus.failed;
+    unawaited(stopped.catchError((Object _) {}));
   }
 
   Future<void> setMuted(bool muted) async {
@@ -67,6 +90,8 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
 
   Future<void> stop({bool clear = false}) async {
     if (_disposed) return;
+    _acceptErrors = false;
+    _cancelRequest();
     final generation = ++_generation;
     // Clear the instruction when leaving its procedure or item.
     if (clear) _text = null;
@@ -82,6 +107,8 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
 
   Future<void> speak(String text) async {
     if (_disposed) return;
+    _acceptErrors = false;
+    _cancelRequest();
     _text = text;
     if (_muted) return stop();
     final generation = ++_generation;
@@ -90,13 +117,18 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
       if (_disposed || generation != _generation) return;
       value = SpeechStatus.loading;
       if (_disposed || generation != _generation) return;
-      final bytes = await _audio.synthesize(text);
+      final request = Completer<void>();
+      _request = request;
+      final bytes = await _audio.synthesize(text, cancel: request.future);
       if (_disposed || generation != _generation) return;
+      _acceptErrors = true;
       await _playback.play(bytes);
       if (!_disposed && generation == _generation) value = _playbackStatus;
     } catch (_) {
       // A late failure belongs to its original instruction.
       if (!_disposed && generation == _generation) value = SpeechStatus.failed;
+    } finally {
+      if (generation == _generation) _cancelRequest();
     }
   }
 
@@ -104,7 +136,9 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    _cancelRequest();
     unawaited(_states.cancel());
+    unawaited(_events.cancel());
     unawaited(_playback.dispose().catchError((Object _) {}));
     super.dispose();
   }

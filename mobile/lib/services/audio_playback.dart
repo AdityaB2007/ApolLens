@@ -13,6 +13,7 @@ final class AudioPlayback {
 
   PlayerState get state => _player.state;
   Stream<PlayerState> get states => _player.onPlayerStateChanged;
+  Stream<AudioEvent> get events => _player.eventStream;
 
   Future<void> pause() {
     final generation = ++_generation;

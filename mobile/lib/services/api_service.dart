@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 
 final class ApiService {
   ApiService(this.baseUri, this.token, {http.Client? client})
-    : _client = client ?? http.Client() {
+      : _client = client ?? http.Client() {
     if (!['http', 'https'].contains(baseUri.scheme) ||
         baseUri.host.isEmpty ||
         baseUri.userInfo.isNotEmpty ||
@@ -25,7 +25,11 @@ final class ApiService {
   bool _disposed = false;
   final _pending = <Completer<void>>{};
 
-  Future<http.Response> post(String path, Map<String, Object?> body) async {
+  Future<http.Response> post(
+    String path,
+    Map<String, Object?> body, {
+    Future<void>? cancel,
+  }) async {
     if (_disposed) throw StateError('Backend client is closed.');
     final target = baseUri.resolve(path);
     // Never send authentication to a different server or embedded user.
@@ -36,20 +40,24 @@ final class ApiService {
       throw ArgumentError('Expected a path on the configured backend.');
     }
     final aborted = Completer<void>();
-    final request =
-        http.AbortableRequest('POST', target, abortTrigger: aborted.future)
-          ..followRedirects = false
-          ..headers.addAll({
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          })
-          ..body = jsonEncode(body);
+    final signal = cancel == null
+        ? aborted.future
+        : Future.any<void>([aborted.future, cancel]);
+    final request = http.AbortableRequest('POST', target, abortTrigger: signal)
+      ..followRedirects = false
+      ..headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      })
+      ..body = jsonEncode(body);
     _pending.add(aborted);
     try {
-      return await _client
-          .send(request)
-          .then(_readResponse)
-          .timeout(const Duration(seconds: 15));
+      return await Future.any<http.Response>([
+        _client.send(request).then(_readResponse),
+        signal.then<http.Response>((_) {
+          throw http.RequestAbortedException(target);
+        }),
+      ]).timeout(const Duration(seconds: 15));
     } finally {
       _pending.remove(aborted);
       // A timeout must also release the underlying connection.

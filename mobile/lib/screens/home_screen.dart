@@ -1,5 +1,6 @@
 // Gavin - Equipment selection for ApolLens inspections.
 import 'package:flutter/material.dart';
+import 'package:apollens/screens/procedure_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -11,7 +12,7 @@ class HomeScreen extends StatelessWidget {
       // Scroll the equipment list on smaller screens.
       body: ListView(
         padding: const EdgeInsets.all(24),
-        children: const [
+        children: [
           Text('Equipment', style: TextStyle(fontSize: 28)),
           SizedBox(height: 20),
           Card(
@@ -19,6 +20,10 @@ class HomeScreen extends StatelessWidget {
               leading: Icon(Icons.air),
               title: Text('HEPA air purifier'),
               subtitle: Text('Guided inspection'),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProcedureScreen()),
+              ),
             ),
           ),
         ],

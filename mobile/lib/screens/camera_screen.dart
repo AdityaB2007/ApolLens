@@ -82,15 +82,16 @@ class _CameraScreenState extends State<CameraScreen>
     final camera = _camera;
     return camera?.value.isInitialized == true
         ? CameraPreview(camera!)
-        : Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(_status, textAlign: TextAlign.center),
-              TextButton(
-                onPressed: _camera == null ? _openCamera : null,
-                child: const Text('Retry camera'),
-              ),
-            ],
+        : SingleChildScrollView(
+            child: Column(
+              children: [
+                Text(_status, textAlign: TextAlign.center),
+                TextButton(
+                  onPressed: _camera == null ? _openCamera : null,
+                  child: const Text('Retry camera'),
+                ),
+              ],
+            ),
           );
   }
 }

@@ -3,11 +3,14 @@ import 'package:apollens/models/inspection_step.dart';
 import 'package:apollens/screens/camera_screen.dart';
 import 'package:apollens/screens/home_screen.dart';
 import 'package:flutter/material.dart';
+import '../services/speech_controller.dart';
+import '../widgets/instruction_audio.dart';
 
 class ProcedureScreen extends StatefulWidget {
-  const ProcedureScreen({super.key, required this.steps});
+  const ProcedureScreen({super.key, required this.steps, this.speech});
 
   final List<InspectionStep> steps;
+  final SpeechController? speech;
 
   @override
   State<ProcedureScreen> createState() => _ProcedureScreenState();
@@ -25,7 +28,7 @@ class _ProcedureScreenState extends State<ProcedureScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.steps.isEmpty) return const HomeScreen();
+    if (widget.steps.isEmpty) return HomeScreen(speech: widget.speech);
     final count = widget.steps.length;
     final complete = _stepIndex == count;
     final step = complete
@@ -48,6 +51,11 @@ class _ProcedureScreenState extends State<ProcedureScreen> {
           const SizedBox(height: 12),
           // Progress counts reviewed steps, not the step currently open.
           LinearProgressIndicator(value: _stepIndex / count),
+          const SizedBox(height: 16),
+          InstructionAudio(
+            speech: widget.speech,
+            text: complete ? null : '${step.title}\n\n${step.detail}',
+          ),
           const SizedBox(height: 24),
           if (!complete) ...[
             // Leave room for the full preview above the written instruction.
@@ -58,8 +66,6 @@ class _ProcedureScreenState extends State<ProcedureScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Audio guidance is not connected yet.'),
-            const SizedBox(height: 24),
           ],
           Text(step.title, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
@@ -73,8 +79,8 @@ class _ProcedureScreenState extends State<ProcedureScreen> {
                 onPressed: _stepIndex == 0 || complete
                     ? null
                     : () => setState(() {
-                        _stepIndex = (_stepIndex - 1).clamp(0, count);
-                      }),
+                          _stepIndex = (_stepIndex - 1).clamp(0, count);
+                        }),
                 child: const Text('Previous'),
               ),
               FilledButton(

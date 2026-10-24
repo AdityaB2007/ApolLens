@@ -10,10 +10,13 @@ import 'audio_service.dart';
 enum SpeechStatus { idle, loading, playing, paused, muted, failed }
 
 final class SpeechController extends ValueNotifier<SpeechStatus> {
-  SpeechController(this._audio, this._playback) : super(SpeechStatus.idle);
+  SpeechController(this._audio, this._playback) : super(SpeechStatus.idle) {
+    _states = _playback.states.listen(_onPlaybackState);
+  }
 
   final AudioService _audio;
   final AudioPlayback _playback;
+  late final StreamSubscription<PlayerState> _states;
   int _generation = 0;
   bool _disposed = false;
   String? _text;
@@ -21,6 +24,20 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
 
   String? get text => _text;
   bool get muted => _muted;
+
+  SpeechStatus get _playbackStatus => switch (_playback.state) {
+        PlayerState.playing => SpeechStatus.playing,
+        PlayerState.paused => SpeechStatus.paused,
+        _ => SpeechStatus.idle,
+      };
+
+  void _onPlaybackState(PlayerState state) {
+    // Queued events must still describe the current active audio.
+    if (_disposed || _muted || state != _playback.state) return;
+    if (value == SpeechStatus.playing || value == SpeechStatus.paused) {
+      value = _playbackStatus;
+    }
+  }
 
   Future<void> setMuted(bool muted) async {
     if (_disposed || muted == _muted) return;
@@ -40,11 +57,7 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
     try {
       await (paused ? _playback.pause() : _playback.resume());
       if (_disposed || generation != _generation) return;
-      value = switch (_playback.state) {
-        PlayerState.playing => SpeechStatus.playing,
-        PlayerState.paused => SpeechStatus.paused,
-        _ => SpeechStatus.idle,
-      };
+      value = _playbackStatus;
     } catch (_) {
       if (!_disposed && generation == _generation) value = SpeechStatus.failed;
     }
@@ -80,7 +93,7 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
       final bytes = await _audio.synthesize(text);
       if (_disposed || generation != _generation) return;
       await _playback.play(bytes);
-      if (!_disposed && generation == _generation) value = SpeechStatus.playing;
+      if (!_disposed && generation == _generation) value = _playbackStatus;
     } catch (_) {
       // A late failure belongs to its original instruction.
       if (!_disposed && generation == _generation) value = SpeechStatus.failed;
@@ -91,6 +104,7 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
+    unawaited(_states.cancel());
     unawaited(_playback.dispose().catchError((Object _) {}));
     super.dispose();
   }

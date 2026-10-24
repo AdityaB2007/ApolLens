@@ -1,6 +1,7 @@
 // Gavin - App entry point and theme.
 // Starts the Flutter interface for ApolLens.
 import 'package:flutter/material.dart';
+import 'package:apollens/screens/home_screen.dart';
 
 void main() => runApp(const ApolLensApp());
 
@@ -17,10 +18,7 @@ class ApolLensApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB3452E)),
         scaffoldBackgroundColor: const Color(0xFFF4F3EF),
       ),
-      home: Scaffold(
-        appBar: AppBar(title: const Text('ApolLens')),
-        body: const Center(child: Text('Select a repair to begin.')),
-      ),
+      home: const HomeScreen(),
     );
   }
 }

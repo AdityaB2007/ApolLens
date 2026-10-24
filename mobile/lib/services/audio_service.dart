@@ -1,1 +1,29 @@
-// Gavin: Request and play spoken instructions from Indi's audio API.
+// Gavin - Fetch spoken ApolLens instructions from Indi's backend.
+import 'dart:typed_data';
+
+import 'api_service.dart';
+
+final class AudioService {
+  const AudioService(this._api);
+
+  final ApiService _api;
+
+  Future<Uint8List> synthesize(String text) async {
+    if (text.trim().isEmpty) {
+      throw ArgumentError('An instruction is required.');
+    }
+    // Keep speech identical to the text shown on the phone.
+    final response = await _api.post('/api/audio/speak', {'text': text});
+    final contentType = response.headers['content-type']
+        ?.split(';')
+        .first
+        .trim()
+        .toLowerCase();
+    if (response.statusCode != 200 ||
+        contentType != 'audio/mpeg' ||
+        response.bodyBytes.isEmpty) {
+      throw StateError('Spoken instructions are unavailable.');
+    }
+    return response.bodyBytes;
+  }
+}

@@ -5,6 +5,7 @@ import 'package:apollens/models/recognition_state.dart';
 import 'package:apollens/screens/camera_screen.dart';
 import 'package:apollens/services/speech_controller.dart';
 import 'package:apollens/services/procedure_service.dart';
+import 'package:apollens/services/session_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
@@ -12,12 +13,14 @@ class HomeScreen extends StatelessWidget {
     this.recognition,
     this.speech,
     this.procedures,
+    this.sessions,
   });
 
   // The session owner supplies and disposes the recognition service.
   final ValueListenable<RecognitionState>? recognition;
   final SpeechController? speech;
   final ProcedureService? procedures;
+  final SessionService? sessions;
 
   @override
   Widget build(BuildContext context) {

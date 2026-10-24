@@ -8,5 +8,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  camera: ^0.12.1
 flutter:
   uses-material-design: true

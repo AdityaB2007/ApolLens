@@ -1,1 +1,28 @@
-// Gavin: Live camera preview, frame capture, and detection results in Flutter.
+// Gavin - Camera viewport for ApolLens repair instructions.
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+
+class CameraScreen extends StatefulWidget {
+  const CameraScreen({super.key});
+
+  @override
+  State<CameraScreen> createState() => _CameraScreenState();
+}
+
+class _CameraScreenState extends State<CameraScreen> {
+  CameraController? _camera;
+
+  @override
+  void dispose() {
+    _camera?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final camera = _camera;
+    return camera?.value.isInitialized == true
+        ? CameraPreview(camera!)
+        : const Center(child: Text('Camera is not connected.'));
+  }
+}

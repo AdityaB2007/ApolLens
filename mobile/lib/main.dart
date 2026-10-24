@@ -7,16 +7,23 @@ import 'services/api_service.dart';
 import 'services/audio_playback.dart';
 import 'services/audio_service.dart';
 import 'services/speech_controller.dart';
+import 'services/procedure_service.dart';
 import 'package:apollens/screens/home_screen.dart';
 
 void main() => runApp(const ApolLensApp());
 
 class ApolLensApp extends StatefulWidget {
-  const ApolLensApp({super.key, this.backend, this.createPlayback});
+  const ApolLensApp({
+    super.key,
+    this.backend,
+    this.createPlayback,
+    this.lookupProcedure,
+  });
 
   // The app owns this configured client. No client means text-only guidance.
   final ApiService? backend;
   final AudioPlayback Function()? createPlayback;
+  final ProcedureLookup? lookupProcedure;
 
   @override
   State<ApolLensApp> createState() => _ApolLensAppState();
@@ -24,11 +31,13 @@ class ApolLensApp extends StatefulWidget {
 
 class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
   SpeechController? _speech;
+  late ProcedureService _procedures;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _procedures = ProcedureService(lookup: widget.lookupProcedure);
     _configureSpeech();
   }
 
@@ -47,6 +56,10 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
   @override
   void didUpdateWidget(ApolLensApp oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.lookupProcedure != widget.lookupProcedure) {
+      _procedures.dispose();
+      _procedures = ProcedureService(lookup: widget.lookupProcedure);
+    }
     if (oldWidget.backend == widget.backend &&
         oldWidget.createPlayback == widget.createPlayback) return;
     _speech?.dispose();
@@ -66,6 +79,7 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _speech?.dispose();
+    _procedures.dispose();
     widget.backend?.dispose();
     super.dispose();
   }
@@ -80,7 +94,7 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB3452E)),
         scaffoldBackgroundColor: const Color(0xFFF4F3EF),
       ),
-      home: HomeScreen(speech: _speech),
+      home: HomeScreen(speech: _speech, procedures: _procedures),
     );
   }
 }

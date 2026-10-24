@@ -4,13 +4,20 @@ import 'package:flutter/foundation.dart';
 import 'package:apollens/models/recognition_state.dart';
 import 'package:apollens/screens/camera_screen.dart';
 import 'package:apollens/services/speech_controller.dart';
+import 'package:apollens/services/procedure_service.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, this.recognition, this.speech});
+  const HomeScreen({
+    super.key,
+    this.recognition,
+    this.speech,
+    this.procedures,
+  });
 
   // The session owner supplies and disposes the recognition service.
   final ValueListenable<RecognitionState>? recognition;
   final SpeechController? speech;
+  final ProcedureService? procedures;
 
   @override
   Widget build(BuildContext context) {

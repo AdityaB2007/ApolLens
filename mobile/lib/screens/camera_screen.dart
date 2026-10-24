@@ -25,6 +25,7 @@ class _CameraScreenState extends State<CameraScreen>
 
   Future<void> _openCamera() async {
     final request = ++_request;
+    setState(() => _status = 'Starting camera…');
     try {
       await _closing;
       final cameras = await availableCameras();
@@ -33,7 +34,10 @@ class _CameraScreenState extends State<CameraScreen>
         throw CameraException('NoCamera', 'No camera found.');
       }
       final camera = CameraController(
-        cameras.first,
+        cameras.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.back,
+          orElse: () => cameras.first,
+        ),
         ResolutionPreset.medium,
         enableAudio: false,
       );
@@ -42,6 +46,7 @@ class _CameraScreenState extends State<CameraScreen>
       if (mounted && request == _request) setState(() {});
     } catch (_) {
       if (mounted && request == _request) {
+        _closeCamera();
         setState(() => _status = 'Camera unavailable. Check camera access.');
       }
     }
@@ -77,6 +82,15 @@ class _CameraScreenState extends State<CameraScreen>
     final camera = _camera;
     return camera?.value.isInitialized == true
         ? CameraPreview(camera!)
-        : Center(child: Text(_status));
+        : Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_status, textAlign: TextAlign.center),
+              TextButton(
+                onPressed: _camera == null ? _openCamera : null,
+                child: const Text('Retry camera'),
+              ),
+            ],
+          );
   }
 }

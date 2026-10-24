@@ -1,5 +1,6 @@
 // Gavin - Displays the current step in an ApolLens inspection.
 import 'package:apollens/models/inspection_step.dart';
+import 'package:apollens/screens/camera_screen.dart';
 import 'package:flutter/material.dart';
 
 class ProcedureScreen extends StatefulWidget {
@@ -38,6 +39,18 @@ class _ProcedureScreenState extends State<ProcedureScreen> {
           // Progress counts reviewed steps, not the step currently open.
           LinearProgressIndicator(value: _stepIndex / count),
           const SizedBox(height: 24),
+          if (!complete) ...[
+            // Leave room for the full preview above the written instruction.
+            const Card(
+              child: SizedBox(
+                height: 240,
+                child: Center(child: CameraScreen()),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Audio guidance is not connected yet.'),
+            const SizedBox(height: 24),
+          ],
           Text(step.title, style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 16),
           Text(step.detail),

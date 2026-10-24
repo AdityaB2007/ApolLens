@@ -1,9 +1,14 @@
 // Gavin - Opens ApolLens on the camera without selecting an item first.
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:apollens/models/recognition_state.dart';
 import 'package:apollens/screens/camera_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.recognition});
+
+  // The session owner supplies and disposes the recognition service.
+  final ValueListenable<RecognitionState>? recognition;
 
   @override
   Widget build(BuildContext context) {
@@ -22,11 +27,27 @@ class HomeScreen extends StatelessWidget {
             child: SizedBox(height: 320, child: Center(child: CameraScreen())),
           ),
           const SizedBox(height: 24),
-          const Text('Item recognition unavailable'),
+          if (recognition == null)
+            _status(RecognitionState.unavailable)
+          else
+            ValueListenableBuilder<RecognitionState>(
+              valueListenable: recognition!,
+              builder: (context, state, child) => _status(state),
+            ),
           const SizedBox(height: 8),
-          const Text('Guidance will appear after the item is identified.'),
+          const Text('Repair and audio guidance are not connected yet.'),
         ],
       ),
     );
   }
+
+  Widget _status(RecognitionState state) => Semantics(
+    liveRegion: true,
+    child: Text(switch (state.status) {
+      RecognitionStatus.unavailable => 'Item recognition unavailable',
+      RecognitionStatus.identifying => 'Identifying item…',
+      RecognitionStatus.unknown => 'Item not recognized. Try another angle.',
+      RecognitionStatus.identified => 'Detected: ${state.label}',
+    }),
+  );
 }

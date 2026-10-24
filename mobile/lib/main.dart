@@ -3,6 +3,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'models/recognition_state.dart';
+import 'models/camera_frame.dart';
+import 'services/frame_controller.dart';
 
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
@@ -23,7 +25,8 @@ class ApolLensApp extends StatefulWidget {
     this.lookupProcedure,
     this.writeSession,
     this.recognition,
-  });
+    this.recognizeFrame,
+  }) : assert(recognition == null || recognizeFrame == null);
 
   // The app owns this configured client. No client means text-only guidance.
   final ApiService? backend;
@@ -31,6 +34,7 @@ class ApolLensApp extends StatefulWidget {
   final ProcedureLookup? lookupProcedure;
   final SessionWriter? writeSession;
   final ValueListenable<RecognitionState>? recognition;
+  final FrameRecognizer? recognizeFrame;
 
   @override
   State<ApolLensApp> createState() => _ApolLensAppState();
@@ -38,6 +42,7 @@ class ApolLensApp extends StatefulWidget {
 
 class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
   SpeechController? _speech;
+  FrameController? _frames;
   late ProcedureService _procedures;
   late SessionService _sessions;
 
@@ -48,6 +53,13 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
     _procedures = ProcedureService(lookup: widget.lookupProcedure);
     _sessions = SessionService(write: widget.writeSession);
     _configureSpeech();
+    _configureFrames();
+  }
+
+  void _configureFrames() {
+    _frames = widget.recognizeFrame == null
+        ? null
+        : FrameController(recognize: widget.recognizeFrame);
   }
 
   void _configureSpeech() {
@@ -65,6 +77,10 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
   @override
   void didUpdateWidget(ApolLensApp oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.recognizeFrame != widget.recognizeFrame) {
+      _frames?.dispose();
+      _configureFrames();
+    }
     if (oldWidget.writeSession != widget.writeSession) {
       _sessions.dispose();
       _sessions = SessionService(write: widget.writeSession);
@@ -94,6 +110,7 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
     _speech?.dispose();
     _procedures.dispose();
     _sessions.dispose();
+    _frames?.dispose();
     widget.backend?.dispose();
     super.dispose();
   }
@@ -112,7 +129,8 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
           speech: _speech,
           procedures: _procedures,
           sessions: _sessions,
-          recognition: widget.recognition),
+          frames: _frames,
+          recognition: _frames ?? widget.recognition),
     );
   }
 }

@@ -1,5 +1,6 @@
 // Gavin - Opens ApolLens on the camera without selecting an item first.
 import 'dart:async';
+import '../services/frame_controller.dart';
 import 'package:flutter/material.dart';
 import '../widgets/session_guide.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,7 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     this.recognition,
+    this.frames,
     this.speech,
     this.procedures,
     this.sessions,
@@ -20,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 
   // The session owner supplies and disposes the recognition service.
   final ValueListenable<RecognitionState>? recognition;
+  final FrameController? frames;
   final SpeechController? speech;
   final ProcedureService? procedures;
   final SessionService? sessions;
@@ -80,9 +83,10 @@ class _HomeScreenState extends State<HomeScreen> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
-            const Card(
-              child:
-                  SizedBox(height: 320, child: Center(child: CameraScreen())),
+            Card(
+              child: SizedBox(
+                  height: 320,
+                  child: Center(child: CameraScreen(frames: widget.frames))),
             ),
             const SizedBox(height: 24),
             if (widget.recognition == null)

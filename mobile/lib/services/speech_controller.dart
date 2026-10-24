@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'audio_playback.dart';
 import 'audio_service.dart';
 
-enum SpeechStatus { idle, loading, playing, paused, failed }
+enum SpeechStatus { idle, loading, playing, paused, muted, failed }
 
 final class SpeechController extends ValueNotifier<SpeechStatus> {
   SpeechController(this._audio, this._playback) : super(SpeechStatus.idle);
@@ -16,8 +16,17 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
   int _generation = 0;
   bool _disposed = false;
   String? _text;
+  bool _muted = false;
 
   String? get text => _text;
+  bool get muted => _muted;
+
+  Future<void> setMuted(bool muted) async {
+    if (_disposed || muted == _muted) return;
+    _muted = muted;
+    // Unmuting waits for an explicit replay or the next instruction.
+    await stop();
+  }
 
   Future<void> replay() => _text == null ? Future.value() : speak(_text!);
 
@@ -28,7 +37,9 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
     if (clear) _text = null;
     try {
       await _playback.stop();
-      if (!_disposed && generation == _generation) value = SpeechStatus.idle;
+      if (!_disposed && generation == _generation) {
+        value = _muted ? SpeechStatus.muted : SpeechStatus.idle;
+      }
     } catch (_) {
       if (!_disposed && generation == _generation) value = SpeechStatus.failed;
     }
@@ -37,6 +48,7 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
   Future<void> speak(String text) async {
     if (_disposed) return;
     _text = text;
+    if (_muted) return stop();
     final generation = ++_generation;
     try {
       await _playback.stop();

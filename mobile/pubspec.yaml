@@ -1,0 +1,15 @@
+# Gavin - Flutter package setup.
+# SDK, dependencies, and Material icons for the mobile app.
+name: apollens
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  camera: ^0.12.1
+  http: ^1.6.0
+  audioplayers: ^6.8.1
+flutter:
+  uses-material-design: true

@@ -1,0 +1,68 @@
+// Gavin - Play ApolLens speech and release the native player.
+import 'dart:typed_data';
+
+import 'package:audioplayers/audioplayers.dart';
+
+final class AudioPlayback {
+  AudioPlayback({AudioPlayer? player}) : _player = player ?? AudioPlayer();
+
+  final AudioPlayer _player;
+  Future<void> _pending = Future.value();
+  Future<void>? _closing;
+  int _generation = 0;
+
+  PlayerState get state => _player.state;
+  Stream<PlayerState> get states => _player.onPlayerStateChanged;
+  Stream<AudioEvent> get events => _player.eventStream;
+
+  Future<void> pause() {
+    final generation = ++_generation;
+    return _run(() async {
+      if (generation == _generation && _player.state == PlayerState.playing) {
+        await _player.pause();
+      }
+    });
+  }
+
+  Future<void> resume() {
+    final generation = _generation;
+    return _run(() async {
+      // Resume belongs to the paused instruction, never a replacement.
+      if (generation == _generation && _player.state == PlayerState.paused) {
+        await _player.resume();
+      }
+    });
+  }
+
+  Future<void> play(Uint8List bytes) {
+    final generation = ++_generation;
+    return _run(() async {
+      if (generation != _generation) return;
+      await _player.stop();
+      if (_closing != null || generation != _generation) return;
+      await _player.setSource(BytesSource(bytes, mimeType: 'audio/mpeg'));
+      // Loading may finish after the user leaves or changes the instruction.
+      if (_closing == null && generation == _generation) {
+        await _player.resume();
+      }
+    });
+  }
+
+  Future<void> stop() {
+    _generation++;
+    return _run(_player.stop);
+  }
+
+  // Run native commands in order; closing skips anything still queued.
+  Future<void> _run(Future<void> Function() operation) async {
+    if (_closing != null) throw StateError('Audio player is closed.');
+    final task = _pending.then((_) async {
+      if (_closing == null) await operation();
+    });
+    _pending = task.catchError((Object _) {});
+    return task;
+  }
+
+  Future<void> dispose() =>
+      _closing ??= _pending.then((_) => _player.dispose());
+}

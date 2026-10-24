@@ -9,5 +9,6 @@ dependencies:
   flutter:
     sdk: flutter
   camera: ^0.12.1
+  http: ^1.6.0
 flutter:
   uses-material-design: true

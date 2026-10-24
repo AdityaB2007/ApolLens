@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:apollens/models/recognition_state.dart';
 import 'package:apollens/screens/camera_screen.dart';
+import 'package:apollens/services/speech_controller.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, this.recognition});
+  const HomeScreen({super.key, this.recognition, this.speech});
 
   // The session owner supplies and disposes the recognition service.
   final ValueListenable<RecognitionState>? recognition;
+  final SpeechController? speech;
 
   @override
   Widget build(BuildContext context) {
@@ -35,19 +37,22 @@ class HomeScreen extends StatelessWidget {
               builder: (context, state, child) => _status(state),
             ),
           const SizedBox(height: 8),
-          const Text('Repair and audio guidance are not connected yet.'),
+          Text(speech == null
+              ? 'Repair and audio guidance are not connected yet.'
+              : 'Repair instructions are not connected yet.'),
         ],
       ),
     );
   }
 
   Widget _status(RecognitionState state) => Semantics(
-    liveRegion: true,
-    child: Text(switch (state.status) {
-      RecognitionStatus.unavailable => 'Item recognition unavailable',
-      RecognitionStatus.identifying => 'Identifying item…',
-      RecognitionStatus.unknown => 'Item not recognized. Try another angle.',
-      RecognitionStatus.identified => 'Detected: ${state.label}',
-    }),
-  );
+        liveRegion: true,
+        child: Text(switch (state.status) {
+          RecognitionStatus.unavailable => 'Item recognition unavailable',
+          RecognitionStatus.identifying => 'Identifying item…',
+          RecognitionStatus.unknown =>
+            'Item not recognized. Try another angle.',
+          RecognitionStatus.identified => 'Detected: ${state.label}',
+        }),
+      );
 }

@@ -25,6 +25,7 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
   bool _disposed = false;
   String? _text;
   bool _muted = false;
+  bool _active = true;
 
   String? get text => _text;
   bool get muted => _muted;
@@ -62,6 +63,13 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
     unawaited(stopped.catchError((Object _) {}));
   }
 
+  Future<void> setActive(bool active) async {
+    if (_disposed || _active == active) return;
+    _active = active;
+    // Returning to the app waits for replay or a new instruction.
+    if (!active) await stop();
+  }
+
   Future<void> setMuted(bool muted) async {
     if (_disposed || muted == _muted) return;
     _muted = muted;
@@ -70,7 +78,7 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
   }
 
   Future<void> setPaused(bool paused) async {
-    if (_disposed || _muted) return;
+    if (_disposed || _muted || !_active) return;
     // Pausing during loading cancels that instruction's pending playback.
     if (value == SpeechStatus.loading) {
       if (paused) await stop();
@@ -110,7 +118,7 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
     _acceptErrors = false;
     _cancelRequest();
     _text = text;
-    if (_muted) return stop();
+    if (_muted || !_active) return stop();
     final generation = ++_generation;
     try {
       await _playback.stop();

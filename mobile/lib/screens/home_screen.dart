@@ -1,6 +1,6 @@
-// Gavin - Equipment selection for ApolLens inspections.
+// Gavin - Opens ApolLens on the camera without selecting an item first.
 import 'package:flutter/material.dart';
-import 'package:apollens/screens/procedure_screen.dart';
+import 'package:apollens/screens/camera_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -9,23 +9,22 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('ApolLens')),
-      // Scroll the equipment list on smaller screens.
+      // Keep the camera and status readable on smaller screens.
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          Text('Equipment', style: TextStyle(fontSize: 28)),
-          SizedBox(height: 20),
-          Card(
-            child: ListTile(
-              leading: Icon(Icons.laptop),
-              title: Text('Laptop'),
-              subtitle: Text('Guided inspection'),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProcedureScreen()),
-              ),
-            ),
+          Text(
+            'Point your camera at the item',
+            style: Theme.of(context).textTheme.headlineSmall,
           ),
+          const SizedBox(height: 16),
+          const Card(
+            child: SizedBox(height: 320, child: Center(child: CameraScreen())),
+          ),
+          const SizedBox(height: 24),
+          const Text('Item recognition unavailable'),
+          const SizedBox(height: 8),
+          const Text('Guidance will appear after the item is identified.'),
         ],
       ),
     );

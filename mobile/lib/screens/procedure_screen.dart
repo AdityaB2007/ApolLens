@@ -1,10 +1,13 @@
-// Gavin - Displays the current step in an ApolLens inspection.
+// Gavin - Displays repair steps supplied after item recognition.
 import 'package:apollens/models/inspection_step.dart';
 import 'package:apollens/screens/camera_screen.dart';
+import 'package:apollens/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 
 class ProcedureScreen extends StatefulWidget {
-  const ProcedureScreen({super.key});
+  const ProcedureScreen({super.key, required this.steps});
+
+  final List<InspectionStep> steps;
 
   @override
   State<ProcedureScreen> createState() => _ProcedureScreenState();
@@ -15,17 +18,24 @@ class _ProcedureScreenState extends State<ProcedureScreen> {
   int _stepIndex = 0;
 
   @override
+  void didUpdateWidget(ProcedureScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.steps != widget.steps) _stepIndex = 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final count = laptopInspection.length;
+    if (widget.steps.isEmpty) return const HomeScreen();
+    final count = widget.steps.length;
     final complete = _stepIndex == count;
     final step = complete
         ? const InspectionStep(
             'Walkthrough complete',
             'Steps reviewed manually. Camera verification is not connected.',
           )
-        : laptopInspection[_stepIndex];
+        : widget.steps[_stepIndex];
     return Scaffold(
-      appBar: AppBar(title: const Text('Laptop inspection')),
+      appBar: AppBar(title: const Text('Repair guidance')),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [

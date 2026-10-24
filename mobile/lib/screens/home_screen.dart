@@ -138,14 +138,31 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _status(RecognitionState state) => Semantics(
-        liveRegion: true,
-        child: Text(switch (state.status) {
-          RecognitionStatus.unavailable => 'Item recognition unavailable',
-          RecognitionStatus.identifying => 'Identifying item…',
-          RecognitionStatus.unknown =>
-            'Item not recognized. Try another angle.',
-          RecognitionStatus.identified => 'Detected: ${state.label}',
-        }),
-      );
+  Widget _status(RecognitionState state) {
+    final result = widget.frames?.result;
+    final notice = result?.blocked == true
+        ? 'View is blocked. Clear the camera and try another angle.'
+        : (widget.frames != null &&
+                result == null &&
+                state.status == RecognitionStatus.identified
+            ? 'Last recognized: ${state.label}'
+            : null);
+    final placementMissing = result != null &&
+        result.detections.isNotEmpty &&
+        result.geometry == null;
+    return Semantics(
+      liveRegion: true,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(notice ??
+            switch (state.status) {
+              RecognitionStatus.unavailable => 'Item recognition unavailable',
+              RecognitionStatus.identifying => 'Identifying item…',
+              RecognitionStatus.unknown =>
+                'Item not recognized. Try another angle.',
+              RecognitionStatus.identified => 'Detected: ${state.label}',
+            }),
+        if (placementMissing) const Text('Component positions unavailable.'),
+      ]),
+    );
+  }
 }

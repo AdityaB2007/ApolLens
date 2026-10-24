@@ -84,6 +84,7 @@ final class FrameRecognition {
     required this.sequence,
     required this.recognition,
     this.blocked = false,
+    this.geometry,
     List<Detection> detections = const [],
   }) : detections = List.unmodifiable(detections) {
     if (sessionId.trim().isEmpty ||
@@ -103,6 +104,49 @@ final class FrameRecognition {
   final int sequence;
   final RecognitionState recognition;
   final bool blocked;
+  final FrameGeometry? geometry;
   // Upright, unmirrored source coordinates; the preview handles presentation.
   final List<Detection> detections;
+}
+
+// The adapter supplies the confirmed native preview transform, never a guess.
+final class FrameGeometry {
+  FrameGeometry(
+      {required this.clockwiseQuarterTurns, required this.previewCrop}) {
+    if (clockwiseQuarterTurns < 0 ||
+        clockwiseQuarterTurns > 3 ||
+        !previewCrop.isFinite ||
+        previewCrop.isEmpty ||
+        previewCrop.left < 0 ||
+        previewCrop.top < 0 ||
+        previewCrop.right > 1 ||
+        previewCrop.bottom > 1) {
+      throw ArgumentError('Invalid upright source-to-preview geometry.');
+    }
+  }
+
+  final int clockwiseQuarterTurns;
+  // Normalized visible region in the upright, unmirrored source image.
+  final Rect previewCrop;
+
+  Rect? mapBox(Rect box, CameraFrame frame, Size viewport) {
+    final source = clockwiseQuarterTurns.isOdd
+        ? Size(frame.height.toDouble(), frame.width.toDouble())
+        : Size(frame.width.toDouble(), frame.height.toDouble());
+    final aspect =
+        source.width * previewCrop.width / (source.height * previewCrop.height);
+    if (!viewport.isFinite ||
+        viewport.isEmpty ||
+        (aspect / viewport.aspectRatio - 1).abs() > .01) return null;
+    final visible = box.intersect(previewCrop);
+    if (visible.isEmpty) return null;
+    final left = (visible.left - previewCrop.left) / previewCrop.width;
+    final right = (visible.right - previewCrop.left) / previewCrop.width;
+    return Rect.fromLTRB(
+      (frame.previewMirrored ? 1 - right : left) * viewport.width,
+      (visible.top - previewCrop.top) / previewCrop.height * viewport.height,
+      (frame.previewMirrored ? 1 - left : right) * viewport.width,
+      (visible.bottom - previewCrop.top) / previewCrop.height * viewport.height,
+    );
+  }
 }

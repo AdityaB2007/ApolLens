@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/camera_frame.dart';
+import '../widgets/detection_overlay.dart';
 import '../services/frame_controller.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -167,12 +168,29 @@ class _CameraScreenState extends State<CameraScreen>
     super.dispose();
   }
 
+  Widget _preview(CameraController camera) {
+    final frames = widget.frames;
+    if (frames == null) return CameraPreview(camera);
+    return ListenableBuilder(
+        listenable: Listenable.merge([frames, camera]),
+        builder: (context, _) {
+          final frame = frames.resultFrame;
+          final result = frames.result;
+          final aligned = frame?.orientation == camera.value.deviceOrientation;
+          return CameraPreview(camera,
+              child: DetectionOverlay(const SizedBox.expand(),
+                  aligned ? result?.detections ?? [] : [],
+                  frame: aligned ? frame : null,
+                  geometry: aligned ? result?.geometry : null));
+        });
+  }
+
   @override
   Widget build(BuildContext context) {
     final camera = _camera;
     return camera?.value.isInitialized == true
         ? Column(children: [
-            Expanded(child: CameraPreview(camera!)),
+            Expanded(child: _preview(camera!)),
             if (_streamError != null) ...[
               Text(_streamError!, textAlign: TextAlign.center),
               TextButton(

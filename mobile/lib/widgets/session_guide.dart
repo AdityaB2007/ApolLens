@@ -8,6 +8,7 @@ import '../models/repair_session.dart';
 import '../services/session_service.dart';
 import '../services/speech_controller.dart';
 import 'instruction_audio.dart';
+import 'observation_notes.dart';
 
 class SessionGuide extends StatefulWidget {
   const SessionGuide(
@@ -73,6 +74,17 @@ class _SessionGuideState extends State<SessionGuide> {
     widget.sessions?.save(_session);
   }
 
+  void _changeObservation(String id, String? text) {
+    final observations = Map<String, String>.of(_session.observations);
+    if (text == null) {
+      observations.remove(id);
+    } else {
+      observations[id] = text;
+    }
+    setState(() => _session = _session.revise(observations: observations));
+    widget.sessions?.save(_session);
+  }
+
   @override
   Widget build(BuildContext context) {
     final procedure = _session.procedure;
@@ -84,6 +96,7 @@ class _SessionGuideState extends State<SessionGuide> {
       children: [
         Text(procedure.title, style: Theme.of(context).textTheme.headlineSmall),
         SelectableText('Source: ${procedure.source}'),
+        Text('Manual revision: ${procedure.revision}'),
         Text(
             '${_session.confirmedStepIds.length} of ${steps.length} steps reviewed'),
         LinearProgressIndicator(
@@ -114,6 +127,16 @@ class _SessionGuideState extends State<SessionGuide> {
                       ? 'Confirm and finish'
                       : 'Confirm and next'))),
         ]),
+        const SizedBox(height: 16),
+        // Keep unresolved notes through restart; a different item starts fresh.
+        ObservationNotes(
+          key: ValueKey(_session.id),
+          observations: _session.observations,
+          onAdd: (text) =>
+              _changeObservation('note-${_session.revision + 1}', text),
+          onDismiss: (id) => _changeObservation(id, null),
+        ),
+        const SizedBox(height: 16),
         if (widget.sessions case final sessions?)
           ValueListenableBuilder<SessionSaveState>(
             valueListenable: sessions,

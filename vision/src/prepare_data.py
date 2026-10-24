@@ -6,7 +6,7 @@ from collections import Counter
 from pathlib import Path
 from PIL import Image, UnidentifiedImageError
 
-SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+SUPPORTED_EXTENSIONS = {".avif", ".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 def discover_images(image_dir: Path) -> list[Path]:
     # Find supported image files, including nested directories.

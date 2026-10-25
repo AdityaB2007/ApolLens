@@ -1,9 +1,7 @@
 // Indi: Backend API entry point, route registration, and request authentication.
+import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
-import dotenv from 'dotenv';
 import audioRoutes from './routes/audio.js';
-
-dotenv.config();
 
 const app = express();
 app.use(express.json()); 

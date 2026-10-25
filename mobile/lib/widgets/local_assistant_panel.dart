@@ -11,6 +11,7 @@ import '../models/detection.dart';
 import '../models/recognition_state.dart';
 import '../models/repair_procedure.dart';
 import '../services/frame_controller.dart';
+import '../services/laptop_repair_guide.dart';
 import '../services/local_repair_assistant.dart';
 import '../services/offline_speech_service.dart';
 import '../services/procedure_service.dart';
@@ -45,7 +46,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
   RepairProgress? _progress;
   List<String> _confirmedParts = const [];
   int _conversation = 0;
-  String? _question;
+  String? _question, _questionAction;
   String? _notice;
   String _reportedProblem = '';
   String? _guideKey;
@@ -159,6 +160,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
     _busy = false;
     _confirmedParts = const [];
     _progress = null;
+    _questionAction = null;
     _question = null;
     _notice = null;
     _reportedProblem = '';
@@ -215,28 +217,18 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
       _notice = null;
     });
     try {
-      var decision = await widget.assistant.reason(
+      final decision = await widget.assistant.reason(
         _confirmedParts.map(componentName).toList(),
         combined,
         completedActions: previous?.completedActions ?? const [],
+        latestUpdate: response,
+        currentDecision: previous?.decision,
+        currentAction: _questionAction,
       );
       if (!mounted || conversation != _conversation) return;
       setState(() {
         _reportedProblem = combined;
-        if (previous != null &&
-            previous.decision.intent == RepairIntent.replace &&
-            previous.decision.target == decision.target &&
-            !previous.did('reassemble')) {
-          decision = RepairDecision(
-            intent: RepairIntent.replace,
-            target: decision.target,
-            issue: decision.issue,
-            evidence: decision.evidence,
-          );
-        }
-        if (previous == null ||
-            previous.did('reassemble') ||
-            previous.decision.target != decision.target) {
+        if (previous == null || previous.decision.target != decision.target) {
           _progress = RepairProgress(decision);
         } else {
           previous.decision = decision;
@@ -260,6 +252,9 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
   }
 
   void _tellMore() {
+    _questionAction = _progress == null
+        ? null
+        : nextLaptopRepairCard(_progress!).id;
     _progress?.requireReadinessReview();
     setState(() {
       _question = 'What changed, or where are you stuck?';

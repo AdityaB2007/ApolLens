@@ -5,6 +5,14 @@ enum RepairIntent { diagnose, replace }
 
 enum RepairTarget { storage, ram, fan, battery, unknown }
 
+enum RepairObstacle {
+  none,
+  stuckFastener,
+  unclearConnector,
+  poorFit,
+  notRecognized,
+}
+
 enum RepairIssue {
   bootMissing,
   bootConfiguration,
@@ -21,11 +29,13 @@ final class RepairDecision {
     required this.target,
     required this.issue,
     required this.evidence,
+    this.obstacle = RepairObstacle.none,
   });
   final RepairIntent intent;
   final RepairTarget target;
   final RepairIssue issue;
   final String evidence;
+  final RepairObstacle obstacle;
 
   static const _fields = {'intent', 'component', 'issue', 'evidence'};
 
@@ -33,8 +43,8 @@ final class RepairDecision {
     if (raw.length > 8000) throw const FormatException('Response is too long.');
     final value = jsonDecode(raw);
     if (value is! Map<String, dynamic> ||
-        value.length != _fields.length ||
-        value.keys.any((key) => !_fields.contains(key)) ||
+        !_fields.every(value.containsKey) ||
+        value.keys.any((key) => !_fields.contains(key) && key != 'obstacle') ||
         value.values.any((entry) => entry is! String)) {
       throw const FormatException('Expected the repair classification schema.');
     }
@@ -59,6 +69,16 @@ final class RepairDecision {
     final intent = choice('intent', RepairIntent.values);
     final target = choice('component', RepairTarget.values);
     final issue = choice('issue', RepairIssue.values);
+    if (issue == RepairIssue.bootConfiguration &&
+        !RegExp(
+          r'boot manager|bootloader|boot files|boot configuration|bcd|grub',
+          caseSensitive: false,
+        ).hasMatch(reportedProblem)) {
+      throw const FormatException(
+        'bootConfiguration requires a reported boot-entry or boot-files problem. '
+        'Use bootMissing for an absent drive; unknown for unrelated mechanical difficulties.',
+      );
+    }
     final expected = switch (issue) {
       RepairIssue.bootMissing ||
       RepairIssue.bootConfiguration => RepairTarget.storage,
@@ -80,6 +100,9 @@ final class RepairDecision {
       target: target,
       issue: issue,
       evidence: evidence,
+      obstacle: value.containsKey('obstacle')
+          ? choice('obstacle', RepairObstacle.values)
+          : RepairObstacle.none,
     );
   }
 }

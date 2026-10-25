@@ -21,6 +21,32 @@ void main() {
     expect(decision.target, RepairTarget.storage);
     expect(decision.issue, RepairIssue.bootMissing);
   });
+  test(
+    'obstacle output stays bounded and cannot replace required evidence',
+    () {
+      final value = jsonDecode(reply()) as Map<String, dynamic>;
+      value['obstacle'] = 'stuckFastener';
+      expect(
+        RepairDecision.decode(
+          jsonEncode(value),
+          'boot device not found',
+        ).obstacle,
+        RepairObstacle.stuckFastener,
+      );
+      value['obstacle'] = 'invented_release_motion';
+      expect(
+        () => RepairDecision.decode(jsonEncode(value), 'boot device not found'),
+        throwsFormatException,
+      );
+      value['obstacle'] = 'none';
+      value.remove('evidence');
+      expect(
+        () => RepairDecision.decode(jsonEncode(value), 'boot device not found'),
+        throwsFormatException,
+      );
+    },
+  );
+
   test('preserves replacement intent without asserting proof of a fault', () {
     final decision = RepairDecision.decode(
       reply(intent: 'replace', evidence: 'I want to replace my SSD'),
@@ -63,6 +89,25 @@ void main() {
     expect(
       () => RepairDecision.decode(wrong, 'boot device not found'),
       throwsFormatException,
+    );
+  });
+
+  test('boot configuration requires an actual boot-entry or files report', () {
+    final raw = reply().replaceFirst('bootMissing', 'bootConfiguration');
+    expect(
+      () => RepairDecision.decode(raw, 'boot device not found'),
+      throwsFormatException,
+    );
+    final valid = raw.replaceFirst(
+      'boot device not found',
+      'Boot Manager is missing',
+    );
+    expect(
+      RepairDecision.decode(
+        valid,
+        'The SSD is listed; Boot Manager is missing',
+      ).issue,
+      RepairIssue.bootConfiguration,
     );
   });
 

@@ -45,6 +45,35 @@ void main() {
     expect(assistant.state.status, LocalAssistantStatus.ready);
   });
 
+  test(
+    'follow-ups distinguish the current action from old replacement intent',
+    () async {
+      runtime.response =
+          '{"intent":"diagnose","component":"storage",'
+          '"issue":"bootMissing","evidence":"The new drive is still missing"}';
+      const previous = RepairDecision(
+        intent: RepairIntent.replace,
+        target: RepairTarget.storage,
+        issue: RepairIssue.bootMissing,
+        evidence: 'Replace the SSD',
+      );
+      await assistant.reason(
+        ['Storage drive'],
+        'Replace the SSD. The new drive is still missing',
+        latestUpdate: 'The new drive is still missing',
+        currentDecision: previous,
+        currentAction: 'storage_verify',
+        completedActions: ['storage_remove', 'storage_insert', 'reassemble'],
+      );
+      final context = jsonDecode(runtime.lastPrompt!) as Map;
+      expect(context['latest_update'], 'The new drive is still missing');
+      expect(context['current_goal'], 'replace');
+      expect(context['current_component'], 'storage');
+      expect(context['current_action'], 'storage_verify');
+      expect(context['completed_actions'], contains('reassemble'));
+    },
+  );
+
   test('reasoning retry explains a contradictory component', () async {
     const reply =
         '{"intent":"diagnose","component":"storage",'

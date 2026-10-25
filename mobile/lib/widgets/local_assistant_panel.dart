@@ -338,6 +338,12 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
             state.message ?? 'Download the assistant once to use it offline.',
           ),
           const SizedBox(height: 8),
+          if (state.status == LocalAssistantStatus.failed)
+            TextButton.icon(
+              onPressed: widget.assistant.retrySetup,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry setup'),
+            ),
           const Text('About 1 GB. Works offline after setup.'),
           Align(
             alignment: Alignment.centerLeft,

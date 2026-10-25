@@ -24,6 +24,21 @@ void main() {
 
   tearDown(() => assistant.dispose());
 
+  test(
+    'setup retry reopens an installed model without downloading again',
+    () async {
+      final retryRuntime = FakeLocalModelRuntime()..initializationFailures = 1;
+      final retryAssistant = LocalRepairAssistant(runtime: retryRuntime);
+      await retryAssistant.initialize();
+      expect(retryAssistant.state.status, LocalAssistantStatus.failed);
+      await retryAssistant.retrySetup();
+      expect(retryAssistant.state.status, LocalAssistantStatus.ready);
+      expect(retryRuntime.initializeCalls, 2);
+      expect(retryRuntime.installCalls, 0);
+      retryAssistant.dispose();
+    },
+  );
+
   test('reasons over all parts and retries ungrounded evidence', () async {
     const reply =
         '{"intent":"replace","component":"storage",'
@@ -498,12 +513,20 @@ final class FakeLocalModelRuntime implements LocalModelRuntime {
   final responses = <String>[];
   int generateCalls = 0;
   int cancelCalls = 0;
+  int initializationFailures = 0, initializeCalls = 0, installCalls = 0;
 
   @override
-  Future<void> initialize() async {}
+  Future<void> initialize() async {
+    initializeCalls++;
+    if (initializationFailures > 0) {
+      initializationFailures--;
+      throw StateError('Temporary runtime initialization failure.');
+    }
+  }
 
   @override
   Future<void> install(void Function(int progress) onProgress) async {
+    installCalls++;
     onProgress(100);
   }
 

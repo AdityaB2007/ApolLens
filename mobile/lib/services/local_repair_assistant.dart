@@ -275,6 +275,13 @@ Keep each check concrete and short for spoken use. No markdown.
     }
   }
 
+  Future<void> retrySetup() async {
+    if (_disposed || _state.status != LocalAssistantStatus.failed) return;
+    _setState(const LocalAssistantState(LocalAssistantStatus.checking));
+    _initialization = null;
+    await initialize();
+  }
+
   Future<void> installModel() async {
     if (_disposed || _state.status == LocalAssistantStatus.installing) return;
     _setState(const LocalAssistantState(LocalAssistantStatus.installing));

@@ -15,7 +15,16 @@ final class AppleLocalModelRuntime
   int _generation = 0;
 
   @override
-  Future<void> initialize() => _initialization ??= _initialize();
+  Future<void> initialize() async {
+    if (_disposed) throw StateError('Local runtime is closed.');
+    final attempt = _initialization ??= _initialize();
+    try {
+      await attempt;
+    } catch (_) {
+      if (identical(_initialization, attempt)) _initialization = null;
+      rethrow;
+    }
+  }
 
   Future<void> _initialize() async {
     if (!kIsWeb &&

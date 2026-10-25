@@ -101,6 +101,17 @@ void main() {
     },
   );
 
+  test('setup can retry a transient fallback initialization failure', () async {
+    available = false;
+    fallback.initializationFailures = 1;
+    await expectLater(runtime.initialize(), throwsStateError);
+    await Future.wait([runtime.initialize(), runtime.initialize()]);
+    expect(fallback.initializeCalls, 2);
+    expect(await runtime.loadActiveModel(), isTrue);
+    await runtime.dispose();
+    await expectLater(runtime.initialize(), throwsStateError);
+  });
+
   test(
     'native snapshots replace prior text and release their session',
     () async {

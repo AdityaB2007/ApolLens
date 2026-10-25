@@ -43,6 +43,12 @@ final class RepairProgress {
   bool has(RepairFact fact) => _facts.contains(fact);
   bool did(String id) => _completed.contains(id);
 
+  void requireReadinessReview() {
+    if (did('reassemble')) return;
+    _facts.removeAll({RepairFact.powerIsolated, RepairFact.coverOpen});
+    _completed.removeAll({'isolate_power', 'confirm_access'});
+  }
+
   static const _exclusive = [
     {RepairFact.m2Drive, RepairFact.sataDrive, RepairFact.solderedStorage},
     {RepairFact.sodimmRam, RepairFact.solderedRam},

@@ -1,6 +1,15 @@
 // Gavin - Offline handling steps; hardware details are confirmed before use.
 import '../models/repair_progress.dart';
 
+const batteryHazardStop = RepairCard(
+  id: 'battery_stop',
+  title: 'Stop working on this equipment',
+  detail:
+      'Do not touch or remove internals around a swollen or burning '
+      'battery. Keep clear and seek qualified battery handling assistance.',
+  terminal: true,
+);
+
 const replacementPreparation = [
   RepairCard(
     id: 'prepare_data',

@@ -5,14 +5,7 @@ import 'storage_repair_steps.dart';
 
 RepairCard storageReplacementCard(RepairProgress progress) {
   if (progress.decision.issue == RepairIssue.batteryHazard) {
-    return const RepairCard(
-      id: 'battery_stop',
-      title: 'Stop working on this equipment',
-      detail:
-          'Do not touch or remove internals around a swollen or burning '
-          'battery. Keep clear and seek qualified battery handling assistance.',
-      terminal: true,
-    );
+    return batteryHazardStop;
   }
   if (progress.decision.intent != RepairIntent.replace ||
       progress.decision.target != RepairTarget.storage) {

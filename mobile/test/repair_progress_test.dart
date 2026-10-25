@@ -1,6 +1,7 @@
 import 'package:apollens/models/repair_decision.dart';
 import 'package:apollens/models/repair_progress.dart';
 import 'package:apollens/services/storage_repair_guide.dart';
+import 'package:apollens/services/ram_repair_guide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -62,6 +63,42 @@ void main() {
     expect(confirmStorageCard(progress, fake), isFalse);
     expect(progress.has(RepairFact.powerIsolated), isFalse);
   });
+
+  for (final form in [RepairFact.sodimmRam, RepairFact.solderedRam]) {
+    test('RAM mount: ${form.name}', () {
+      progress.decision = const RepairDecision(
+        intent: RepairIntent.replace,
+        target: RepairTarget.ram,
+        issue: RepairIssue.memoryErrors,
+        evidence: 'Replace the RAM',
+      );
+      for (var i = 0; i < 3; i++) {
+        progress.confirm(ramReplacementCard(progress));
+      }
+      expect(ramReplacementCard(progress).id, 'ram_form');
+      progress.confirm(ramReplacementCard(progress), choice: form);
+      if (form == RepairFact.solderedRam) {
+        expect(ramReplacementCard(progress).terminal, isTrue);
+        expect(progress.did('ram_release'), isFalse);
+        return;
+      }
+      final actions = <String>[];
+      for (var i = 0; i < 8 && !ramReplacementCard(progress).terminal; i++) {
+        final card = ramReplacementCard(progress);
+        actions.add(card.id);
+        progress.confirm(card);
+      }
+      expect(actions, [
+        'ram_compatibility',
+        'ram_release',
+        'ram_remove',
+        'ram_insert',
+        'reassemble',
+        'ram_verify',
+      ]);
+      expect(ramReplacementCard(progress).id, 'ram_finish');
+    });
+  }
 
   test('manual actions are recorded once with stable IDs', () {
     const card = RepairCard(

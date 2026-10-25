@@ -65,6 +65,18 @@ void main() {
     expect(progress.has(RepairFact.powerIsolated), isFalse);
   });
 
+  test('missing-drive output cannot claim an unrecorded installation', () {
+    progress.decision = const RepairDecision(
+      intent: RepairIntent.replace,
+      target: RepairTarget.storage,
+      issue: RepairIssue.bootMissing,
+      evidence: 'drive is absent',
+      obstacle: RepairObstacle.notRecognized,
+    );
+    expect(nextLaptopRepairCard(progress).id, 'prepare_data');
+    expect(progress.did('storage_insert'), isFalse);
+  });
+
   for (final form in [RepairFact.sodimmRam, RepairFact.solderedRam]) {
     test('RAM mount: ${form.name}', () {
       progress.decision = const RepairDecision(

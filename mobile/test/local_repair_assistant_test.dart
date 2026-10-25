@@ -74,6 +74,23 @@ void main() {
     },
   );
 
+  test('fit help cannot be confused with post-install detection', () async {
+    const reply =
+        '{"intent":"replace","component":"storage",'
+        '"issue":"unknown","evidence":"It will not seat","obstacle":"poorFit"}';
+    runtime.responses.addAll([
+      reply.replaceFirst('poorFit', 'notRecognized'),
+      reply,
+    ]);
+    final decision = await assistant.reason(
+      ['Storage drive'],
+      'It will not seat',
+      currentAction: 'storage_insert',
+    );
+    expect(decision.obstacle, RepairObstacle.poorFit);
+    expect(runtime.generateCalls, 2);
+  });
+
   test('reasoning retry explains a contradictory component', () async {
     const reply =
         '{"intent":"diagnose","component":"storage",'

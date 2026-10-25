@@ -95,8 +95,8 @@ void main() {
   test('boot configuration requires an actual boot-entry or files report', () {
     final raw = reply().replaceFirst('bootMissing', 'bootConfiguration');
     expect(
-      () => RepairDecision.decode(raw, 'boot device not found'),
-      throwsFormatException,
+      RepairDecision.decode(raw, 'boot device not found').issue,
+      RepairIssue.unknown,
     );
     final valid = raw.replaceFirst(
       'boot device not found',

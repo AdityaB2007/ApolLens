@@ -70,13 +70,20 @@ class _RepairPlanPanelState extends State<RepairPlanPanel>
     _announce();
   }
 
-  void _replace() {
+  void _replace({bool continueStep = false}) {
     final decision = widget.progress.decision;
+    final intent = continueStep
+        ? widget.progress.did('prepare_data') &&
+                  !widget.progress.did('reassemble')
+              ? RepairIntent.replace
+              : RepairIntent.diagnose
+        : RepairIntent.replace;
     widget.progress.decision = RepairDecision(
-      intent: RepairIntent.replace,
+      intent: intent,
       target: decision.target,
       issue: decision.issue,
       evidence: decision.evidence,
+      obstacle: RepairObstacle.none,
     );
     setState(() {});
     _announce();
@@ -95,6 +102,7 @@ class _RepairPlanPanelState extends State<RepairPlanPanel>
     final canReplace =
         decision.intent == RepairIntent.diagnose &&
         decision.issue != RepairIssue.batteryHazard &&
+        decision.obstacle == RepairObstacle.none &&
         {RepairTarget.storage, RepairTarget.ram}.contains(decision.target);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,6 +130,12 @@ class _RepairPlanPanelState extends State<RepairPlanPanel>
               FilledButton(
                 onPressed: () => _confirm(card),
                 child: const Text('Done'),
+              ),
+            if (decision.obstacle != RepairObstacle.none &&
+                decision.issue != RepairIssue.batteryHazard)
+              OutlinedButton(
+                onPressed: () => _replace(continueStep: true),
+                child: const Text('Return to the current step'),
               ),
             if (canReplace)
               OutlinedButton(

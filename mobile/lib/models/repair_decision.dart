@@ -13,6 +13,32 @@ enum RepairObstacle {
   notRecognized,
 }
 
+List<RepairObstacle> obstaclesForAction(String? action) {
+  if (action?.endsWith('_verify') == true ||
+      action?.endsWith('_finish') == true) {
+    return const [RepairObstacle.none, RepairObstacle.notRecognized];
+  }
+  if (action?.endsWith('_insert') == true) {
+    return const [
+      RepairObstacle.none,
+      RepairObstacle.unclearConnector,
+      RepairObstacle.poorFit,
+    ];
+  }
+  if (action?.endsWith('_release') == true ||
+      action?.endsWith('_secure') == true) {
+    return const [
+      RepairObstacle.none,
+      RepairObstacle.unclearConnector,
+      RepairObstacle.stuckFastener,
+    ];
+  }
+  if (action?.endsWith('_remove') == true) {
+    return const [RepairObstacle.none, RepairObstacle.unclearConnector];
+  }
+  return RepairObstacle.values;
+}
+
 enum RepairIssue {
   bootMissing,
   bootConfiguration,
@@ -56,7 +82,8 @@ final class RepairDecision {
     var evidence = (value['evidence'] as String).trim();
     if (evidence.length >= 2 &&
         ((evidence.startsWith('"') && evidence.endsWith('"')) ||
-            (evidence.startsWith('“') && evidence.endsWith('”')))) {
+            (evidence.startsWith('“') && evidence.endsWith('”')) ||
+            (evidence.startsWith("'") && evidence.endsWith("'")))) {
       evidence = evidence.substring(1, evidence.length - 1).trim();
     }
     String normalize(String text) =>
@@ -68,16 +95,14 @@ final class RepairDecision {
     }
     final intent = choice('intent', RepairIntent.values);
     final target = choice('component', RepairTarget.values);
-    final issue = choice('issue', RepairIssue.values);
+    var issue = choice('issue', RepairIssue.values);
     if (issue == RepairIssue.bootConfiguration &&
         !RegExp(
           r'boot manager|bootloader|boot files|boot configuration|bcd|grub',
           caseSensitive: false,
         ).hasMatch(reportedProblem)) {
-      throw const FormatException(
-        'bootConfiguration requires a reported boot-entry or boot-files problem. '
-        'Use bootMissing for an absent drive; unknown for unrelated mechanical difficulties.',
-      );
+      // An unsupported software diagnosis becomes unknown, never a hardware fault.
+      issue = RepairIssue.unknown;
     }
     final expected = switch (issue) {
       RepairIssue.bootMissing ||

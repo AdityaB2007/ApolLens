@@ -4,10 +4,13 @@ import '../models/repair_progress.dart';
 import 'ram_repair_guide.dart';
 import 'storage_repair_guide.dart';
 import 'storage_repair_steps.dart';
+import 'repair_obstacle_guide.dart';
 
 RepairCard nextLaptopRepairCard(RepairProgress progress) {
   final decision = progress.decision;
   if (decision.issue == RepairIssue.batteryHazard) return batteryHazardStop;
+  final obstacle = repairObstacleCard(progress);
+  if (obstacle != null) return obstacle;
   if (decision.intent == RepairIntent.replace) {
     return switch (decision.target) {
       RepairTarget.storage => storageReplacementCard(progress),

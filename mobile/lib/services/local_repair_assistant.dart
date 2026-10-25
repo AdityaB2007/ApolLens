@@ -8,6 +8,9 @@ import 'package:flutter_edge_ai_litertlm/flutter_edge_ai_litertlm.dart';
 
 import '../models/repair_procedure.dart';
 import '../models/inspection_step.dart';
+import 'apple_local_model_runtime.dart';
+import 'local_model_runtime.dart';
+export 'local_model_runtime.dart';
 
 enum LocalAssistantStatus {
   checking,
@@ -31,15 +34,6 @@ final class LocalAssistantReply {
 
   final String? question;
   final List<InspectionStep> steps;
-}
-
-abstract interface class LocalModelRuntime {
-  Future<void> initialize();
-  Future<void> install(void Function(int progress) onProgress);
-  Future<bool> loadActiveModel();
-  Future<String> generate(String systemInstruction, String prompt);
-  Future<void> cancelGeneration();
-  Future<void> dispose();
 }
 
 final class LiteRtLocalModelRuntime implements LocalModelRuntime {
@@ -170,7 +164,9 @@ final class LocalRepairAssistant extends ChangeNotifier {
         'Laptop computer demonstration; exact model unknown',
     this.offlineKnowledge = laptopDemoKnowledge,
     this.checks = laptopDemoChecks,
-  }) : _runtime = runtime ?? LiteRtLocalModelRuntime();
+  }) : _runtime =
+           runtime ??
+           AppleLocalModelRuntime(fallback: LiteRtLocalModelRuntime());
 
   final String equipmentContext;
   final String offlineKnowledge;

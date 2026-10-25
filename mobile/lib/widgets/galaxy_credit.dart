@@ -17,7 +17,12 @@ class GalaxyCredit extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Image.asset(galaxyImageAsset, height: 180, fit: BoxFit.contain),
+              Image.asset(
+                galaxyImageAsset,
+                height: 180,
+                fit: BoxFit.contain,
+                cacheWidth: 1280,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'NASA, ESA, S. Beckwith (STScI), and The Hubble Heritage Team (STScI/AURA)',

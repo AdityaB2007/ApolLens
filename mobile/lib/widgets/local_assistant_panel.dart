@@ -43,6 +43,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
   final _symptoms = TextEditingController();
   final _observed = <String, ({int hits, DateTime lastSeen})>{};
   CameraFrame? _lastFrame;
+  Timer? _observationExpiry;
   RepairProgress? _progress;
   List<String> _confirmedParts = const [];
   int _conversation = 0;
@@ -116,12 +117,21 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
             _lastFrame != null &&
             (current.sessionId != _lastFrame!.sessionId ||
                 current.orientation != _lastFrame!.orientation))) {
+      _observationExpiry?.cancel();
       _observed.clear();
       _lastFrame = null;
     }
     if (current != null &&
         result?.blocked != true &&
         current.sequence != _lastFrame?.sequence) {
+      _observationExpiry?.cancel();
+      _observationExpiry = Timer(const Duration(seconds: 5), () {
+        if (!mounted || _confirmedParts.isNotEmpty) return;
+        setState(() {
+          _observed.clear();
+          _lastFrame = null;
+        });
+      });
       // Two sightings admit a part; brief dropouts do not reshuffle the list.
       for (final label in result!.detections.map((box) => box.label).toSet()) {
         final seen = _observed[label];
@@ -154,6 +164,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
   }
 
   void _resetConversation() {
+    _observationExpiry?.cancel();
     _conversation++;
     _observed.clear();
     _lastFrame = null;
@@ -174,6 +185,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
   void _confirmParts() {
     final parts = _parts;
     if (_busy || parts.isEmpty) return;
+    _observationExpiry?.cancel();
     _conversation++;
     setState(() {
       _confirmedParts = List.unmodifiable(parts);
@@ -275,6 +287,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
 
   @override
   void dispose() {
+    _observationExpiry?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     widget.frames?.removeListener(_onFrame);
     _conversation++;

@@ -170,6 +170,24 @@ void main() {
     expect(progress.completedActions, contains('boot_entry'));
   });
 
+  test('memory checks advance and do not block an explicit replacement', () {
+    progress.decision = const RepairDecision(
+      intent: RepairIntent.diagnose,
+      target: RepairTarget.ram,
+      issue: RepairIssue.memoryErrors,
+      evidence: 'memory errors',
+    );
+    expect(nextLaptopRepairCard(progress).id, 'memory_signal');
+    confirmLaptopRepairCard(progress, nextLaptopRepairCard(progress));
+    expect(nextLaptopRepairCard(progress).id, 'memory_test');
+    confirmLaptopRepairCard(progress, nextLaptopRepairCard(progress));
+    expect(nextLaptopRepairCard(progress).id, 'new_observation');
+    progress.decision = progress.decision.copyWith(
+      intent: RepairIntent.replace,
+    );
+    expect(nextLaptopRepairCard(progress).id, 'prepare_data');
+  });
+
   test('manual actions are recorded once with stable IDs', () {
     const card = RepairCard(
       id: 'isolate',

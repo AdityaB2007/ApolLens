@@ -330,6 +330,9 @@ bootMissing: no boot device, or drive absent/unknown in firmware.
 bootConfiguration: ONLY a drive explicitly present in firmware with missing
 boot manager, boot files or a stated boot configuration problem.
 Grinding fan is fanNoise; memory errors are memoryErrors; heat is overheating.
+Negated swelling, heat or smell reports are not positive hazards.
+Beep/light codes vary by equipment model; without a stated component diagnostic,
+do not infer RAM or another specific failed component from a code alone.
 Swollen battery or burning smell takes priority: batteryHazard, component battery.
 Copy one short EXACT span from reported_problem into evidence, without extra quotes.
 Never quote component metadata or correction feedback as a symptom.

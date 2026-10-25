@@ -40,7 +40,8 @@ RepairCard nextLaptopRepairCard(RepairProgress progress) {
     };
   }
   if (decision.issue == RepairIssue.bootMissing ||
-      decision.issue == RepairIssue.bootConfiguration) {
+      decision.issue == RepairIssue.bootConfiguration ||
+      decision.target == RepairTarget.storage) {
     if (!progress.has(RepairFact.drivePresent) &&
         !progress.has(RepairFact.driveAbsent)) {
       return const RepairCard(
@@ -70,6 +71,11 @@ RepairCard nextLaptopRepairCard(RepairProgress progress) {
       if (!progress.did(card.id)) return card;
     }
   }
+  if (decision.target == RepairTarget.ram) {
+    for (final card in _memoryChecks) {
+      if (!progress.did(card.id)) return card;
+    }
+  }
   if (decision.issue == RepairIssue.fanNoise ||
       decision.issue == RepairIssue.overheating) {
     for (final card in _coolingChecks) {
@@ -81,7 +87,7 @@ RepairCard nextLaptopRepairCard(RepairProgress progress) {
     title: 'Tell me the latest result',
     detail:
         'Describe the exact error, sound or change after the actions you '
-        'completed. I will keep those actions in context.',
+        'completed. Include the equipment model if available. I will keep those actions in context.',
     terminal: true,
   );
 }
@@ -110,6 +116,24 @@ const _bootChecks = [
         'If trusted recovery media is already available, use its boot-repair '
         'tools before erasing or replacing a detected drive. Report the result '
         'and the operating system. Keep the original files intact.',
+  ),
+];
+
+const _memoryChecks = [
+  RepairCard(
+    id: 'memory_signal',
+    title: 'Record the exact startup signal',
+    detail:
+        'Note the full error, beep sequence or light pattern and the equipment '
+        'model. The same code can mean different things on different models.',
+  ),
+  RepairCard(
+    id: 'memory_test',
+    title: 'Check the memory diagnostic result',
+    detail:
+        'If startup is possible, save work and run the built-in or vendor '
+        'memory diagnostic. Record its exact result. A crash alone does not '
+        'establish that the memory module failed.',
   ),
 ];
 

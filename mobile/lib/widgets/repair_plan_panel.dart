@@ -142,7 +142,8 @@ class _RepairPlanPanelState extends State<RepairPlanPanel>
                 onPressed: () => _replace(continueStep: true),
                 child: const Text('Return to the current step'),
               ),
-            if (widget.progress.did('reassemble') &&
+            if (decision.issue != RepairIssue.batteryHazard &&
+                widget.progress.did('reassemble') &&
                 (widget.progress.has(RepairFact.verificationNeedsHelp) ||
                     decision.obstacle == RepairObstacle.notRecognized))
               OutlinedButton(

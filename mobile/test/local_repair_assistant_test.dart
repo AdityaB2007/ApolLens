@@ -45,6 +45,20 @@ void main() {
     expect(assistant.state.status, LocalAssistantStatus.ready);
   });
 
+  test('reasoning retry explains a contradictory component', () async {
+    const reply =
+        '{"intent":"diagnose","component":"storage",'
+        '"issue":"bootMissing","evidence":"boot device not found"}';
+    runtime.responses.addAll([reply.replaceFirst('storage', 'battery'), reply]);
+    final decision = await assistant.reason([
+      'Battery',
+      'Storage drive',
+    ], 'boot device not found');
+    expect(decision.target, RepairTarget.storage);
+    final context = jsonDecode(runtime.lastPrompt!) as Map;
+    expect(context['correction'], contains('component must be storage'));
+  });
+
   test(
     'cancel rejects a late reasoning result and preserves readiness',
     () async {

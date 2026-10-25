@@ -367,13 +367,15 @@ Return only the four string fields intent, component, issue, evidence.
     _setState(const LocalAssistantState(LocalAssistantStatus.generating));
     try {
       await _cancellation.timeout(const Duration(seconds: 10));
+      String? correction;
       for (var attempt = 0; attempt < 2; attempt++) {
         ensureCurrent();
         final prompt = jsonEncode({
           ...context,
           if (attempt > 0)
             'correction':
-                'Use only the schema fields. Evidence must occur in reported_problem.',
+                correction ??
+                'Use only the schema fields and a verbatim evidence quote.',
         });
         final runtime = _runtime;
         final request = runtime is ConstrainedLocalModelRuntime
@@ -392,7 +394,8 @@ Return only the four string fields intent, component, issue, evidence.
         ensureCurrent();
         try {
           return RepairDecision.decode(raw, problem);
-        } on FormatException {
+        } on FormatException catch (error) {
+          correction = error.message;
           if (attempt == 1) rethrow;
         }
       }

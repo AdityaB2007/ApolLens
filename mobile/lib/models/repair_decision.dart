@@ -43,7 +43,12 @@ final class RepairDecision {
           (throw FormatException('Unknown $field.'));
     }
 
-    final evidence = (value['evidence'] as String).trim();
+    var evidence = (value['evidence'] as String).trim();
+    if (evidence.length >= 2 &&
+        ((evidence.startsWith('"') && evidence.endsWith('"')) ||
+            (evidence.startsWith('“') && evidence.endsWith('”')))) {
+      evidence = evidence.substring(1, evidence.length - 1).trim();
+    }
     String normalize(String text) =>
         text.replaceAll(RegExp(r'\s+'), ' ').replaceAll('’', "'").toLowerCase();
     if (evidence.isEmpty ||
@@ -51,10 +56,29 @@ final class RepairDecision {
         !normalize(reportedProblem).contains(normalize(evidence))) {
       throw const FormatException('Evidence must quote the reported problem.');
     }
+    final intent = choice('intent', RepairIntent.values);
+    final target = choice('component', RepairTarget.values);
+    final issue = choice('issue', RepairIssue.values);
+    final expected = switch (issue) {
+      RepairIssue.bootMissing ||
+      RepairIssue.bootConfiguration => RepairTarget.storage,
+      RepairIssue.memoryErrors => RepairTarget.ram,
+      RepairIssue.fanNoise => RepairTarget.fan,
+      RepairIssue.batteryHazard => RepairTarget.battery,
+      _ => null,
+    };
+    if ((intent == RepairIntent.diagnose ||
+            issue == RepairIssue.batteryHazard) &&
+        expected != null &&
+        target != expected) {
+      throw FormatException(
+        'For ${issue.name}, component must be ${expected.name}.',
+      );
+    }
     return RepairDecision(
-      intent: choice('intent', RepairIntent.values),
-      target: choice('component', RepairTarget.values),
-      issue: choice('issue', RepairIssue.values),
+      intent: intent,
+      target: target,
+      issue: issue,
       evidence: evidence,
     );
   }

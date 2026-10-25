@@ -55,6 +55,25 @@ void main() {
       throwsFormatException,
     );
   });
+  test('rejects a diagnosis that targets the wrong subsystem', () {
+    final wrong = reply().replaceFirst(
+      '"component":"storage"',
+      '"component":"battery"',
+    );
+    expect(
+      () => RepairDecision.decode(wrong, 'boot device not found'),
+      throwsFormatException,
+    );
+  });
+
+  test('accepts enclosing quotation marks only around real source text', () {
+    final decision = RepairDecision.decode(
+      reply(evidence: '"boot device not found"'),
+      'boot device not found',
+    );
+    expect(decision.evidence, 'boot device not found');
+  });
+
   test(
     'normalizes whitespace and case without accepting paraphrased facts',
     () {

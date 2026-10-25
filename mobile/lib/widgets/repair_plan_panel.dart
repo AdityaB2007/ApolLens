@@ -78,13 +78,16 @@ class _RepairPlanPanelState extends State<RepairPlanPanel>
               ? RepairIntent.replace
               : RepairIntent.diagnose
         : RepairIntent.replace;
-    widget.progress.decision = RepairDecision(
+    widget.progress.decision = decision.copyWith(
       intent: intent,
-      target: decision.target,
-      issue: decision.issue,
-      evidence: decision.evidence,
       obstacle: RepairObstacle.none,
     );
+    setState(() {});
+    _announce();
+  }
+
+  void _retryVerification() {
+    widget.progress.retryVerification();
     setState(() {});
     _announce();
   }
@@ -101,6 +104,7 @@ class _RepairPlanPanelState extends State<RepairPlanPanel>
     final decision = widget.progress.decision;
     final canReplace =
         decision.intent == RepairIntent.diagnose &&
+        !widget.progress.did('reassemble') &&
         decision.issue != RepairIssue.batteryHazard &&
         decision.obstacle == RepairObstacle.none &&
         {RepairTarget.storage, RepairTarget.ram}.contains(decision.target);
@@ -132,10 +136,18 @@ class _RepairPlanPanelState extends State<RepairPlanPanel>
                 child: const Text('Done'),
               ),
             if (decision.obstacle != RepairObstacle.none &&
+                !widget.progress.did('reassemble') &&
                 decision.issue != RepairIssue.batteryHazard)
               OutlinedButton(
                 onPressed: () => _replace(continueStep: true),
                 child: const Text('Return to the current step'),
+              ),
+            if (widget.progress.did('reassemble') &&
+                (widget.progress.has(RepairFact.verificationNeedsHelp) ||
+                    decision.obstacle == RepairObstacle.notRecognized))
+              OutlinedButton(
+                onPressed: _retryVerification,
+                child: const Text('Recheck the result'),
               ),
             if (canReplace)
               OutlinedButton(

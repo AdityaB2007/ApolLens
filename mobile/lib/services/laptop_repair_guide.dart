@@ -9,8 +9,22 @@ import 'repair_obstacle_guide.dart';
 RepairCard nextLaptopRepairCard(RepairProgress progress) {
   final decision = progress.decision;
   if (decision.issue == RepairIssue.batteryHazard) return batteryHazardStop;
-  final obstacle = repairObstacleCard(progress);
+  final obstacle = repairObstacleCard(
+    progress,
+    obstacle: progress.has(RepairFact.verificationNeedsHelp)
+        ? RepairObstacle.notRecognized
+        : null,
+  );
   if (obstacle != null) return obstacle;
+  if (progress.did('reassemble')) {
+    if (decision.target == RepairTarget.storage &&
+        !progress.did('storage_verify')) {
+      return verifyStorage;
+    }
+    if (decision.target == RepairTarget.ram && !progress.did('ram_verify')) {
+      return verifyMemory;
+    }
+  }
   if (decision.intent == RepairIntent.replace) {
     return switch (decision.target) {
       RepairTarget.storage => storageReplacementCard(progress),

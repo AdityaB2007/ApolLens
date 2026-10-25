@@ -110,6 +110,10 @@ const reassembleEquipment = RepairCard(
 const verifyStorage = RepairCard(
   id: 'storage_verify',
   title: 'Check the new drive is recognized',
+  choices: {
+    'New drive is listed': RepairFact.verificationMatches,
+    'New drive is missing': RepairFact.verificationNeedsHelp,
+  },
   detail:
       'Start the laptop and check the firmware storage list. Record whether '
       'the new drive appears and any error. Recognition alone does not mean '

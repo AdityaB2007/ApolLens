@@ -2,13 +2,17 @@
 import '../models/repair_decision.dart';
 import '../models/repair_progress.dart';
 
-RepairCard? repairObstacleCard(RepairProgress progress) {
-  if (progress.decision.obstacle == RepairObstacle.notRecognized &&
+RepairCard? repairObstacleCard(
+  RepairProgress progress, {
+  RepairObstacle? obstacle,
+}) {
+  final kind = obstacle ?? progress.decision.obstacle;
+  if (kind == RepairObstacle.notRecognized &&
       !progress.did('storage_insert') &&
       !progress.did('ram_insert')) {
     return null;
   }
-  return switch (progress.decision.obstacle) {
+  return switch (kind) {
     RepairObstacle.none => null,
     RepairObstacle.stuckFastener => const RepairCard(
       id: 'stuck_fastener',

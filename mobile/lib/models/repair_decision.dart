@@ -63,6 +63,15 @@ final class RepairDecision {
   final String evidence;
   final RepairObstacle obstacle;
 
+  RepairDecision copyWith({RepairIntent? intent, RepairObstacle? obstacle}) =>
+      RepairDecision(
+        intent: intent ?? this.intent,
+        target: target,
+        issue: issue,
+        evidence: evidence,
+        obstacle: obstacle ?? this.obstacle,
+      );
+
   static const _fields = {'intent', 'component', 'issue', 'evidence'};
 
   factory RepairDecision.decode(String raw, String reportedProblem) {

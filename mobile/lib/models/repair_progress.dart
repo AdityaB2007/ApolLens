@@ -16,6 +16,8 @@ enum RepairFact {
   drivePresent,
   driveAbsent,
   bootManagerMissing,
+  verificationMatches,
+  verificationNeedsHelp,
 }
 
 final class RepairCard {
@@ -49,11 +51,22 @@ final class RepairProgress {
     _completed.removeAll({'isolate_power', 'confirm_access'});
   }
 
+  void retryVerification() {
+    if (!did('reassemble')) return;
+    _facts.removeAll({
+      RepairFact.verificationMatches,
+      RepairFact.verificationNeedsHelp,
+    });
+    _completed.removeAll({'storage_verify', 'ram_verify'});
+    decision = decision.copyWith(obstacle: RepairObstacle.none);
+  }
+
   static const _exclusive = [
     {RepairFact.m2Drive, RepairFact.sataDrive, RepairFact.solderedStorage},
     {RepairFact.sodimmRam, RepairFact.solderedRam},
     {RepairFact.screwRetainer, RepairFact.clipRetainer},
     {RepairFact.drivePresent, RepairFact.driveAbsent},
+    {RepairFact.verificationMatches, RepairFact.verificationNeedsHelp},
   ];
 
   bool confirm(RepairCard card, {RepairFact? choice}) {
@@ -75,6 +88,14 @@ final class RepairProgress {
       if (selected.isNotEmpty) next.removeAll(group);
     }
     next.addAll(additions);
+    if (card.id == 'reassemble') {
+      next.removeAll({
+        RepairFact.powerIsolated,
+        RepairFact.coverOpen,
+        RepairFact.drivePresent,
+        RepairFact.driveAbsent,
+      });
+    }
     if (_completed.length >= 40) {
       throw StateError('Start a new repair session.');
     }

@@ -38,7 +38,13 @@ void main() {
     for (var i = 0; i < 10 && !storageReplacementCard(progress).terminal; i++) {
       final card = storageReplacementCard(progress);
       actions.add(card.id);
-      confirmStorageCard(progress, card);
+      confirmStorageCard(
+        progress,
+        card,
+        choice: card.choices.containsValue(RepairFact.verificationNeedsHelp)
+            ? RepairFact.verificationNeedsHelp
+            : null,
+      );
     }
     expect(actions, [
       'storage_compatibility',
@@ -49,7 +55,21 @@ void main() {
       'reassemble',
       'storage_verify',
     ]);
-    expect(storageReplacementCard(progress).id, 'storage_finish');
+    expect(nextLaptopRepairCard(progress).id, 'replacement_missing');
+    expect(progress.has(RepairFact.powerIsolated), isFalse);
+    expect(progress.has(RepairFact.coverOpen), isFalse);
+    progress.retryVerification();
+    expect(nextLaptopRepairCard(progress).id, 'storage_verify');
+    expect(
+      progress.completedActions.where((id) => id == 'storage_remove'),
+      hasLength(1),
+    );
+    confirmLaptopRepairCard(
+      progress,
+      nextLaptopRepairCard(progress),
+      choice: RepairFact.verificationMatches,
+    );
+    expect(nextLaptopRepairCard(progress).id, 'storage_finish');
   });
 
   test('stale or fabricated cards cannot skip power isolation', () {
@@ -99,7 +119,12 @@ void main() {
       for (var i = 0; i < 8 && !ramReplacementCard(progress).terminal; i++) {
         final card = ramReplacementCard(progress);
         actions.add(card.id);
-        progress.confirm(card);
+        progress.confirm(
+          card,
+          choice: card.choices.containsValue(RepairFact.verificationMatches)
+              ? RepairFact.verificationMatches
+              : null,
+        );
       }
       expect(actions, [
         'ram_compatibility',

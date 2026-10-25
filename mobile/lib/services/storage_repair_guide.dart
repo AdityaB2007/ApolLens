@@ -11,8 +11,10 @@ RepairCard storageReplacementCard(RepairProgress progress) {
       progress.decision.target != RepairTarget.storage) {
     throw ArgumentError('Storage replacement requires a matching request.');
   }
-  for (final card in replacementPreparation) {
-    if (!card.confirms.every(progress.has)) return card;
+  if (!progress.did('reassemble')) {
+    for (final card in replacementPreparation) {
+      if (!card.confirms.every(progress.has)) return card;
+    }
   }
   if (progress.has(RepairFact.solderedStorage)) {
     return const RepairCard(

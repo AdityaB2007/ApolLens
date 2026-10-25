@@ -11,8 +11,10 @@ RepairCard ramReplacementCard(RepairProgress progress) {
       progress.decision.target != RepairTarget.ram) {
     throw ArgumentError('RAM replacement requires a matching request.');
   }
-  for (final card in replacementPreparation) {
-    if (!card.confirms.every(progress.has)) return card;
+  if (!progress.did('reassemble')) {
+    for (final card in replacementPreparation) {
+      if (!card.confirms.every(progress.has)) return card;
+    }
   }
   if (progress.has(RepairFact.solderedRam)) {
     return const RepairCard(
@@ -35,7 +37,7 @@ RepairCard ramReplacementCard(RepairProgress progress) {
       },
     );
   }
-  final cards = [..._memorySteps, reassembleEquipment, _verifyMemory];
+  final cards = [..._memorySteps, reassembleEquipment, verifyMemory];
   return cards.where((card) => !progress.did(card.id)).firstOrNull ??
       _memoryFinish;
 }
@@ -75,9 +77,13 @@ const _memorySteps = [
   ),
 ];
 
-const _verifyMemory = RepairCard(
+const verifyMemory = RepairCard(
   id: 'ram_verify',
   title: 'Check the reported memory',
+  choices: {
+    'Expected capacity is shown': RepairFact.verificationMatches,
+    'Capacity is wrong or it will not start': RepairFact.verificationNeedsHelp,
+  },
   detail:
       'Start the laptop and check the memory capacity in firmware or the '
       'operating system. Note any startup error, beep or light pattern.',

@@ -6,6 +6,7 @@ import 'package:apollens/models/repair_decision.dart';
 import 'package:apollens/models/repair_progress.dart';
 import 'package:apollens/widgets/repair_plan_panel.dart';
 import 'package:apollens/widgets/galaxy_background.dart';
+import 'package:apollens/widgets/galaxy_credit.dart';
 import 'package:apollens/services/local_repair_assistant.dart';
 import 'package:apollens/services/offline_speech_service.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,28 @@ void main() {
         .setMockMethodCallHandler(speechChannel, null);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(cameraChannel, null);
+  });
+
+  testWidgets('galaxy image credit is readable and available offline', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: GalaxyCredit())),
+    );
+    await tester.tap(find.text('Galaxy image credit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Whirlpool Galaxy · M51'), findsOneWidget);
+    expect(find.textContaining('The Hubble Heritage Team'), findsOneWidget);
+    expect(
+      find.text('https://esahubble.org/images/heic0506a/'),
+      findsOneWidget,
+    );
+    expect(find.byType(Image), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('galaxy pauses with lifecycle and reduced motion', (

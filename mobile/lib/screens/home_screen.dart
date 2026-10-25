@@ -13,6 +13,7 @@ import '../services/session_service.dart';
 import '../services/speech_controller.dart';
 import '../widgets/local_assistant_panel.dart';
 import '../widgets/galaxy_background.dart';
+import '../widgets/galaxy_credit.dart';
 import '../widgets/session_guide.dart';
 import 'camera_screen.dart';
 
@@ -116,7 +117,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-                child: _guidance(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [_guidance(), const GalaxyCredit()],
+                ),
               );
               if (constraints.maxWidth > constraints.maxHeight) {
                 return Row(

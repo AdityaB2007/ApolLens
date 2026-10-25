@@ -1,0 +1,15 @@
+{
+  "source": "https://data.mendeley.com/datasets/pwctygncrj/4",
+  "doi": "10.17632/pwctygncrj.4",
+  "license": "CC BY 4.0",
+  "images": 39,
+  "ram_boxes": 14,
+  "storage_boxes": 13,
+  "exact_duplicate_excluded": "ssd (100).jpg already present as public-ssd-100.jpg in existing training group mendeley-raw-source",
+  "negative_images": 12,
+  "split": "train only; conservative single source group",
+  "annotation_method": "Foreground contrast proposed tight boxes, then all 28 proposed boxes and all 12 negatives visually inspected at enlarged scale by Codex. Approximate, not independent annotations. No full-frame placeholder boxes.",
+  "storage_scope": "storage_drive includes both SSD and HDD. At least some source SSD-folder photos depict a WD mechanical drive; folder name was not accepted as SSD subtype ground truth.",
+  "augmentation": "Raw Data only; no supplied Augmented Data used. Derived crops remain in the same source group.",
+  "limitations": "Isolated product photos, small components, controlled background; does not establish identification in working laptops. No test data added or modified."
+}

@@ -64,9 +64,7 @@ class _CameraScreenState extends State<CameraScreen>
           (camera) => camera.lensDirection == CameraLensDirection.back,
           orElse: () => cameras.first,
         ),
-        widget.frames?.recognize == null
-            ? ResolutionPreset.medium
-            : ResolutionPreset.low,
+        ResolutionPreset.medium,
         enableAudio: false,
         imageFormatGroup: defaultTargetPlatform == TargetPlatform.iOS
             ? ImageFormatGroup.bgra8888

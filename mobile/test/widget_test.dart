@@ -68,35 +68,57 @@ void main() {
   testWidgets('galaxy pauses with lifecycle and reduced motion', (
     tester,
   ) async {
-    Widget scene(bool reduced) => MaterialApp(
-      home: MediaQuery(
-        data: MediaQueryData(disableAnimations: reduced),
-        child: const GalaxyBackground(),
+    Widget scene(bool reduced, {bool ticking = true}) => MaterialApp(
+      home: TickerMode(
+        enabled: ticking,
+        child: MediaQuery(
+          data: MediaQueryData(disableAnimations: reduced),
+          child: const GalaxyBackground(),
+        ),
+      ),
+    );
+    List<double> position() => tester
+        .widget<Transform>(
+          find
+              .descendant(
+                of: find.byType(GalaxyBackground),
+                matching: find.byType(Transform),
+              )
+              .first,
+        )
+        .transform
+        .storage
+        .toList();
+    await tester.pumpWidget(scene(true));
+    await tester.runAsync(
+      () => precacheImage(
+        const ResizeImage(AssetImage(galaxyImageAsset), width: 1280),
+        tester.element(find.byType(GalaxyBackground)),
       ),
     );
     await tester.pumpWidget(scene(false));
-    await tester.pump(const Duration(seconds: 1));
-    final dynamic painter = tester
-        .widget<CustomPaint>(
-          find.descendant(
-            of: find.byType(GalaxyBackground),
-            matching: find.byType(CustomPaint),
-          ),
-        )
-        .painter;
-    expect(painter.motion.value, greaterThan(0));
+    final initial = position();
+    await tester.pump(const Duration(milliseconds: 49));
+    expect(position(), initial);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(position(), isNot(initial));
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    final paused = painter.motion.value;
+    await tester.pump();
+    final paused = position();
     await tester.pump(const Duration(seconds: 2));
-    expect(painter.motion.value, paused);
+    expect(position(), paused);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(painter.motion.value, greaterThan(paused));
+    expect(position(), isNot(paused));
     await tester.pumpWidget(scene(true));
-    final reduced = painter.motion.value;
+    final reduced = position();
     await tester.pump(const Duration(seconds: 3));
-    expect(painter.motion.value, reduced);
+    expect(position(), reduced);
+    await tester.pumpWidget(scene(false, ticking: false));
+    final hidden = position();
+    await tester.pump(const Duration(seconds: 1));
+    expect(position(), hidden);
     expect(tester.binding.hasScheduledFrame, isFalse);
     await tester.pumpWidget(const SizedBox.shrink());
   });

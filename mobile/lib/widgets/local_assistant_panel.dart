@@ -377,7 +377,9 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
             ),
           ] else
             Text(
-              widget.frames == null
+              widget.frames?.result?.blocked == true
+                  ? 'Clear the camera’s view.'
+                  : widget.frames == null
                   ? 'Component detection is unavailable.'
                   : 'Bring the components into view.',
             ),

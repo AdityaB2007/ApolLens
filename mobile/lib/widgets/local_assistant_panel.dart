@@ -236,6 +236,15 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
         currentAction: _questionAction,
       );
       if (!mounted || conversation != _conversation) return;
+      if (previous != null && decision.target == RepairTarget.unknown) {
+        setState(() {
+          _notice =
+              'I’m not sure which part that update refers to. '
+              'Your previous guidance is still available.';
+        });
+        unawaited(widget.speech.speak(_notice!));
+        return;
+      }
       setState(() {
         _observations
           ..clear()

@@ -93,6 +93,31 @@ void main() {
   );
 
   test(
+    'a new component cannot inherit the prior installation obstacle',
+    () async {
+      runtime.response =
+          '{"intent":"replace","component":"ram","issue":"unknown",'
+          '"evidence":"Replace the RAM","obstacle":"notRecognized"}';
+      final decision = await assistant.reason(
+        ['RAM', 'Storage drive'],
+        'The SSD works. Replace the RAM',
+        latestUpdate: 'Replace the RAM',
+        currentAction: 'storage_finish',
+        currentDecision: const RepairDecision(
+          intent: RepairIntent.replace,
+          target: RepairTarget.storage,
+          issue: RepairIssue.unknown,
+          evidence: 'The SSD works',
+        ),
+        completedActions: ['storage_insert', 'reassemble'],
+      );
+      expect(decision.target, RepairTarget.ram);
+      expect(decision.intent, RepairIntent.replace);
+      expect(decision.obstacle, RepairObstacle.none);
+    },
+  );
+
+  test(
     'completed installation continues as verification despite stale intent',
     () async {
       runtime.response =

@@ -447,6 +447,11 @@ Return only intent, component, issue, evidence, obstacle as string fields.
         ensureCurrent();
         try {
           final decision = RepairDecision.decode(raw, problem);
+          // The prior action belongs to the prior component, not a new repair.
+          if (currentDecision != null &&
+              currentDecision.target != decision.target) {
+            return decision.copyWith(obstacle: RepairObstacle.none);
+          }
           if (!obstacles.contains(decision.obstacle)) {
             throw const FormatException(
               'Choose an obstacle allowed for the current action.',

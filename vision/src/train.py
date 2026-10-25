@@ -141,6 +141,7 @@ def save_checkpoint(model, classes, args, epochs, path):
             "seed": args.seed,
             "epochs": epochs,
             "fine_tune": args.fine_tune,
+            "unfreeze_epoch": args.unfreeze_epoch,
             "focus_crops": args.focus_crops,
             "learning_rate": args.learning_rate,
             "image_size": args.image_size,
@@ -174,6 +175,7 @@ def main():
     parser.add_argument("--initial-checkpoint", type=Path)
     parser.add_argument("--learning-rate", type=float, default=0.001)
     parser.add_argument("--fine-tune", action="store_true")
+    parser.add_argument("--unfreeze-epoch", type=int)
     parser.add_argument("--focus-crops", action="store_true")
     parser.add_argument("--image-size", type=int, choices=(320, 640), default=320)
     parser.add_argument("--small-anchors", action="store_true")
@@ -182,6 +184,10 @@ def main():
     args = parser.parse_args()
     if args.device == "mps" and not torch.backends.mps.is_available():
         parser.error("Metal training is unavailable on this host.")
+    if args.unfreeze_epoch is None:
+        args.unfreeze_epoch = args.epochs // 2
+    if not 0 <= args.unfreeze_epoch < args.epochs:
+        parser.error("Unfreeze epoch must be within the training run.")
     if args.checkpoint_every < 0:
         parser.error("Checkpoint interval cannot be negative.")
     if args.epochs < 1 or args.output.exists():
@@ -228,7 +234,7 @@ def main():
     args.output.mkdir(parents=True)
     history = []
     for epoch in range(args.epochs):
-        if args.fine_tune and epoch == args.epochs // 2:
+        if args.fine_tune and epoch == args.unfreeze_epoch:
             for parameter in model.backbone.parameters():
                 parameter.requires_grad_(True)
             optimizer.add_param_group(

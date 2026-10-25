@@ -7,3 +7,12 @@ abstract interface class LocalModelRuntime {
   Future<void> cancelGeneration();
   Future<void> dispose();
 }
+
+// Flat schema choices constrain routing; physical actions remain app-owned.
+abstract interface class ConstrainedLocalModelRuntime {
+  Future<String> generateConstrained(
+    String systemInstruction,
+    String prompt,
+    Map<String, List<String>> choices,
+  );
+}

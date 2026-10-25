@@ -1,10 +1,12 @@
 // Gavin - Use Apple's on-device model when ready; keep the offline LiteRT fallback.
 import 'dart:async';
+import 'dart:convert';
 import 'package:apple_foundation_models/apple_foundation_models.dart' as apple;
 import 'package:flutter/foundation.dart';
 import 'local_model_runtime.dart';
 
-final class AppleLocalModelRuntime implements LocalModelRuntime {
+final class AppleLocalModelRuntime
+    implements LocalModelRuntime, ConstrainedLocalModelRuntime {
   AppleLocalModelRuntime({required this.fallback});
   final LocalModelRuntime fallback;
   Future<void>? _initialization, _active;
@@ -46,14 +48,33 @@ final class AppleLocalModelRuntime implements LocalModelRuntime {
   }
 
   @override
-  Future<String> generate(String systemInstruction, String prompt) {
+  Future<String> generate(String systemInstruction, String prompt) =>
+      _start(systemInstruction, prompt);
+
+  @override
+  Future<String> generateConstrained(
+    String systemInstruction,
+    String prompt,
+    Map<String, List<String>> choices,
+  ) => _start(systemInstruction, prompt, choices);
+
+  Future<String> _start(
+    String systemInstruction,
+    String prompt, [
+    Map<String, List<String>>? choices,
+  ]) {
     if (_disposed) return Future.error(StateError('Local runtime is closed.'));
-    if (!_native) return fallback.generate(systemInstruction, prompt);
+    if (!_native) {
+      final format = choices == null
+          ? ''
+          : '\nJSON fields and choices: ${jsonEncode(choices)}';
+      return fallback.generate('$systemInstruction$format', prompt);
+    }
     if (_generating) {
       return Future.error(StateError('A response is in progress.'));
     }
     _generating = true;
-    final result = _generate(systemInstruction, prompt, _generation);
+    final result = _generate(systemInstruction, prompt, _generation, choices);
     _active = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     return result;
   }
@@ -62,6 +83,7 @@ final class AppleLocalModelRuntime implements LocalModelRuntime {
     String instructions,
     String prompt,
     int generation,
+    Map<String, List<String>>? choices,
   ) async {
     apple.LanguageModelSession? session;
     StreamIterator<String>? tokens;
@@ -72,15 +94,25 @@ final class AppleLocalModelRuntime implements LocalModelRuntime {
       if (_disposed || generation != _generation) {
         throw StateError('Cancelled.');
       }
-      tokens = _tokens = StreamIterator(
-        session.stream(
-          prompt,
-          options: const apple.GenerationOptions(
-            sampling: apple.GreedySampling(),
-            maximumResponseTokens: 384,
-          ),
-        ),
+      const options = apple.GenerationOptions(
+        sampling: apple.GreedySampling(),
+        maximumResponseTokens: 384,
       );
+      final stream = choices == null
+          ? session.stream(prompt, options: options)
+          : session
+                .streamAs(
+                  prompt,
+                  schema: apple.Schema.object({
+                    for (final entry in choices.entries)
+                      entry.key: entry.value.isEmpty
+                          ? apple.Schema.string()
+                          : apple.Schema.oneOf(entry.value, name: entry.key),
+                  }),
+                  options: options,
+                )
+                .map(jsonEncode);
+      tokens = _tokens = StreamIterator(stream);
       var response = '';
       while (await tokens.moveNext()) {
         if (_disposed || generation != _generation) {
@@ -112,8 +144,11 @@ final class AppleLocalModelRuntime implements LocalModelRuntime {
     if (!_native) return fallback.cancelGeneration();
     _generation++;
     final active = _active;
-    await _tokens?.cancel();
-    await active;
+    try {
+      await _tokens?.cancel();
+    } finally {
+      await active;
+    }
   }
 
   @override

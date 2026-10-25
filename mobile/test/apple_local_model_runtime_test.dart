@@ -49,14 +49,26 @@ void main() {
         case 'session.create':
           return ++session;
         case 'session.stream':
+        case 'session.streamAs':
           request = call.arguments['requestId'] as int;
           if (!entered.isCompleted) entered.complete();
           if (!hold) {
             final id = request;
             unawaited(
               Future<void>(() {
-                emit(id, 'delta', 'Hello');
-                emit(id, 'delta', 'Hello world');
+                final structured = call.method == 'session.streamAs';
+                emit(
+                  id,
+                  'delta',
+                  structured ? '{"intent":"replace"}' : 'Hello',
+                );
+                emit(
+                  id,
+                  'delta',
+                  structured
+                      ? '{"intent":"replace","component":"storage"}'
+                      : 'Hello world',
+                );
                 emit(id, 'done');
               }),
             );
@@ -99,6 +111,23 @@ void main() {
       expect(fallback.generateCalls, 0);
     },
   );
+
+  test('native routing is constrained by named enum fields', () async {
+    await runtime.initialize();
+    final reply = await runtime.generateConstrained('system', 'prompt', {
+      'intent': ['diagnose', 'replace'],
+      'component': ['storage', 'ram'],
+    });
+    expect(reply, '{"intent":"replace","component":"storage"}');
+    expect(calls, contains('session.streamAs'));
+  });
+
+  test('Android keeps the offline fallback without probing Apple', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    await runtime.initialize();
+    expect(await runtime.generate('system', 'prompt'), fallback.response);
+    expect(calls, isEmpty);
+  });
 
   test('cancel ignores late snapshots and permits a fresh response', () async {
     hold = true;

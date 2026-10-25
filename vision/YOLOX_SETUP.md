@@ -13,3 +13,5 @@ checkpoints. Input remains RGB float32 [0, 1], letterboxed to 640 with padding
 114. Outputs map back to upright source coordinates through `OnnxDetector`.
 Phone inference needs only the ONNX artifact and manifest, not YOLOX or PyTorch.
 These tools do not establish physical-device accuracy or repair safety.
+
+Run `refine_yolox.py --help` for local fine-tuning inputs, seed, epochs, and CPU/Metal selection.

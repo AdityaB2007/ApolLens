@@ -168,20 +168,20 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
     debugShowCheckedModeBanner: false,
     title: 'ApolLens',
     theme: ThemeData(
-      colorScheme: const ColorScheme.light(
-        primary: Color(0xFFB54220),
-        secondary: Color(0xFFB54220),
-        onSecondary: Colors.white,
-        onPrimary: Colors.white,
-        surface: Colors.white,
-        onSurface: Color(0xFF202923),
-        onSurfaceVariant: Color(0xFF626A64),
-        surfaceContainerHighest: Color(0xFFF1F2ED),
-        outline: Color(0xFFABB2AC),
-        outlineVariant: Color(0xFFE0E3DC),
+      colorScheme: const ColorScheme.dark(
+        primary: Color(0xFFB6A5FF),
+        secondary: Color(0xFF87DDEB),
+        onSecondary: Color(0xFF101B2C),
+        onPrimary: Color(0xFF15112F),
+        surface: Color(0xD911162A),
+        onSurface: Color(0xFFF0F3FF),
+        onSurfaceVariant: Color(0xFFB7C4DF),
+        surfaceContainerHighest: Color(0xFF202943),
+        outline: Color(0xFF65738D),
+        outlineVariant: Color(0x554F5B78),
       ),
       scaffoldBackgroundColor: const Color(0xFF0A101B),
-      dividerColor: const Color(0xFFE0E3DC),
+      dividerColor: const Color(0x33475A80),
       textTheme: const TextTheme(
         headlineMedium: TextStyle(
           fontSize: 28,
@@ -229,7 +229,7 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF6F7F2),
+        fillColor: const Color(0xFF141B2F),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),

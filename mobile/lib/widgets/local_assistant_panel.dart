@@ -177,6 +177,18 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
     }
   }
 
+  void _cancelReply() {
+    _conversation++;
+    unawaited(widget.assistant.cancel());
+    unawaited(widget.speech.stop());
+    setState(() {
+      _busy = false;
+      _notice = null;
+      _question ??= 'What is wrong?';
+      _awaitingSymptoms = _confirmedParts.isNotEmpty;
+    });
+  }
+
   Future<void> _sendSymptoms() async {
     if (_busy || !_awaitingSymptoms) return;
     final conversation = _conversation;
@@ -412,7 +424,20 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
                 alignment: Alignment.centerLeft,
                 child: FilledButton(
                   onPressed: _busy ? null : _sendSymptoms,
-                  child: const Text('Find next steps'),
+                  child: _busy
+                      ? const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 10),
+                            Text('Thinking…'),
+                          ],
+                        )
+                      : const Text('Find next steps'),
                 ),
               ),
             ],
@@ -460,7 +485,27 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
           ],
 
           if (_busy || state.status == LocalAssistantStatus.generating)
-            const LinearProgressIndicator(),
+            Semantics(
+              liveRegion: true,
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      semanticsLabel: 'Generating a response',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Text('Thinking on this device…')),
+                  TextButton(
+                    onPressed: _cancelReply,
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            ),
         ],
         if (_notice != null)
           Padding(

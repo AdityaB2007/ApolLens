@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:apollens/main.dart';
 import 'package:apollens/services/local_repair_assistant.dart';
 import 'package:apollens/services/offline_speech_service.dart';
@@ -48,7 +50,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Mission support'), findsOneWidget);
+    expect(find.text('Mission support'), findsNothing);
+    expect(find.text('ApolLens'), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.text('ApolLens'))).brightness,
+      Brightness.dark,
+    );
     expect(find.text('Select components'), findsOneWidget);
     expect(find.text('Download assistant'), findsOneWidget);
     expect(find.text('About 1 GB. Works offline after setup.'), findsOneWidget);
@@ -56,9 +63,57 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
+  testWidgets('shows thinking and cancels a late native response', (
+    tester,
+  ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final semantics = tester.ensureSemantics();
+    try {
+      final pending = Completer<String>();
+      final assistant = LocalRepairAssistant(
+        runtime: _TestModelRuntime(ready: true, pending: pending),
+      );
+      addTearDown(() async {
+        await assistant.cancel();
+        if (!pending.isCompleted) pending.complete('{"checks":[]}');
+      });
+      final speech = OfflineSpeechService();
+      await tester.pumpWidget(
+        ApolLensApp(localAssistant: assistant, offlineSpeech: speech),
+      );
+      await tester.pumpAndSettle();
+      final request = assistant.describeProblem(['RAM'], null, '', 'No boot.');
+      final canceled = expectLater(request, throwsStateError);
+      await tester.pump();
+      await tester.ensureVisible(find.text('Cancel'));
+      await tester.pump();
+      expect(
+        find.bySemanticsLabel(RegExp('Generating a response')),
+        findsOneWidget,
+      );
+      expect(find.text('Thinking on this device…'), findsOneWidget);
+      await tester.ensureVisible(find.text('Cancel'));
+      await tester.tap(find.text('Cancel'));
+      await tester.pump();
+      expect(find.text('Thinking on this device…'), findsNothing);
+      pending.complete('{"checks":["startup"]}');
+      await canceled;
+      await tester.pump();
+      expect(find.text('Watch startup'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    } finally {
+      semantics.dispose();
+    }
+  });
 }
 
 final class _TestModelRuntime implements LocalModelRuntime {
+  _TestModelRuntime({this.ready = false, this.pending});
+  final bool ready;
+  final Completer<String>? pending;
   @override
   Future<void> initialize() async {}
 
@@ -68,11 +123,11 @@ final class _TestModelRuntime implements LocalModelRuntime {
   }
 
   @override
-  Future<bool> loadActiveModel() async => false;
+  Future<bool> loadActiveModel() async => ready;
 
   @override
   Future<String> generate(String systemInstruction, String prompt) async =>
-      '{"question":"","steps":[]}';
+      pending == null ? '{"question":"","checks":[]}' : await pending!.future;
 
   @override
   Future<void> cancelGeneration() async {}

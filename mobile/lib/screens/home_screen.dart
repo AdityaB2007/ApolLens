@@ -106,46 +106,14 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Mission support',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.headlineMedium?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Offline guidance · Laptop demo',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFFBDC8D4),
-                  ),
-                ),
-                const SizedBox(height: 20),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Column(
-                    children: [
-                      AspectRatio(
-                        aspectRatio: 1,
-                        child: ColoredBox(
-                          color: const Color(0xFF18211E),
-                          child: CameraScreen(frames: widget.frames),
-                        ),
-                      ),
-                      Container(
-                        width: double.infinity,
-                        color: const Color(0xFF18211E),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: widget.recognition == null
-                            ? _status(RecognitionState.unavailable)
-                            : ValueListenableBuilder<RecognitionState>(
-                                valueListenable: widget.recognition!,
-                                builder: (context, state, _) => _status(state),
-                              ),
-                      ),
-                    ],
+                  borderRadius: BorderRadius.circular(18),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: ColoredBox(
+                      color: const Color(0xFF050815),
+                      child: CameraScreen(frames: widget.frames),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -200,26 +168,6 @@ class _HomeScreenState extends State<HomeScreen> {
       itemId: _itemId,
       frames: widget.frames,
       procedures: widget.procedures,
-    );
-  }
-
-  Widget _status(RecognitionState state) {
-    final result = widget.frames?.result;
-    final text = result?.blocked == true
-        ? 'Clear the camera’s view'
-        : switch (state.status) {
-            RecognitionStatus.unavailable =>
-              'Camera view · Detection unavailable',
-            RecognitionStatus.identifying => 'Looking for components…',
-            RecognitionStatus.unknown =>
-              result?.detections.isNotEmpty == true
-                  ? 'Components in view · Review below'
-                  : 'Point at the equipment',
-            RecognitionStatus.identified => state.label ?? 'Device in view',
-          };
-    return Text(
-      text,
-      style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
     );
   }
 }

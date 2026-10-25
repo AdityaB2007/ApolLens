@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
-enum OfflineSpeechStatus { idle, speaking, muted, failed }
+enum OfflineSpeechStatus { idle, speaking, paused, muted, failed }
 
 final class OfflineSpeechService extends ChangeNotifier {
   OfflineSpeechService({FlutterTts? tts}) : _tts = tts ?? FlutterTts() {

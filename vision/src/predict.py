@@ -110,14 +110,19 @@ class LocalDetector:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run a local TFLite detector offline.")
+    parser = argparse.ArgumentParser(description="Run a local detector offline.")
     parser.add_argument("--model", required=True, type=Path)
     parser.add_argument("--image", required=True, type=Path)
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--max-results", type=int, default=20)
     args = parser.parse_args()
     try:
-        with LocalDetector(args.model, args.threshold, args.max_results) as detector:
+        detector_type = LocalDetector
+        if args.model.suffix.lower() == ".onnx":
+            from onnx_detector import OnnxDetector
+
+            detector_type = OnnxDetector
+        with detector_type(args.model, args.threshold, args.max_results) as detector:
             print(json.dumps(detector.detect(args.image), allow_nan=False))
     except ImportError:
         parser.exit(1, "Install vision/requirements.txt before inference.\n")

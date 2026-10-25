@@ -46,103 +46,107 @@ class _ComponentInspectionState extends State<ComponentInspection> {
     return Scaffold(
       appBar: AppBar(title: Text('Locate $name')),
       body: SafeArea(
-        child: Column(
-          children: [
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Frozen reference · pinch to zoom'),
-                    if (_targets.length > 1) ...[
-                      Text('Choose which $name you are working on.'),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Frozen reference · pinch to zoom'),
+                      if (_targets.length > 1) ...[
+                        Text('Choose which $name you are working on.'),
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            for (var i = 0; i < _targets.length; i++)
+                              ChoiceChip(
+                                label: Text('$name ${i + 1}'),
+                                selected: i == _selected,
+                                onSelected: (_) => setState(() {
+                                  _selected = i;
+                                  _marks.clear();
+                                }),
+                              ),
+                          ],
+                        ),
+                      ],
+                      if (widget.requiredCount != null)
+                        Text(
+                          'Mark ${widget.requiredCount} mounting locations.',
+                        ),
+                      if (target != null && widget.kind != null)
+                        Text(
+                          widget.kind == FastenerKind.screw
+                              ? 'Tap each mounting screw for this part. Leave cover and circuit-board screws unmarked.'
+                              : 'Tap the retaining clips for this part. Mark only releases you can identify.',
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: (constraints.maxHeight * .55).clamp(220, 480),
+                  child: ComponentPhoto(
+                    key: ValueKey(_selected),
+                    snapshot: widget.snapshot,
+                    region: target == null
+                        ? const Rect.fromLTWH(0, 0, 1, 1)
+                        : componentInspectionRegion(target),
+                    marks: _marks,
+                    onMark: target != null && widget.kind != null
+                        ? _mark
+                        : null,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      if (_marks.isNotEmpty)
+                        Text(
+                          'Marked by you: ${[for (var i = 0; i < _marks.length; i++) _marks[i].name(i)].join(', ')}',
+                        ),
                       Wrap(
                         spacing: 8,
                         children: [
-                          for (var i = 0; i < _targets.length; i++)
-                            ChoiceChip(
-                              label: Text('$name ${i + 1}'),
-                              selected: i == _selected,
-                              onSelected: (_) => setState(() {
-                                _selected = i;
-                                _marks.clear();
+                          if (_marks.isNotEmpty)
+                            TextButton(
+                              onPressed: () => setState(() {
+                                _marks.removeLast();
                               }),
+                              child: const Text('Undo last mark'),
                             ),
+                          if (widget.kind != null)
+                            FilledButton(
+                              onPressed:
+                                  _marks.isEmpty ||
+                                      (widget.requiredCount != null &&
+                                          _marks.length != widget.requiredCount)
+                                  ? null
+                                  : () => Navigator.pop(
+                                      context,
+                                      FastenerMap(
+                                        widget.snapshot,
+                                        _targets[_selected!],
+                                        _marks,
+                                      ),
+                                    ),
+                              child: const Text('Confirm mounting locations'),
+                            ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Return to live camera'),
+                          ),
                         ],
                       ),
                     ],
-                    if (widget.requiredCount != null)
-                      Text('Mark ${widget.requiredCount} mounting locations.'),
-                    if (target != null && widget.kind != null)
-                      Text(
-                        widget.kind == FastenerKind.screw
-                            ? 'Tap each mounting screw for this part. Leave cover and circuit-board screws unmarked.'
-                            : 'Tap the retaining clips for this part. Mark only releases you can identify.',
-                      ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-            Expanded(
-              flex: 2,
-              child: ComponentPhoto(
-                key: ValueKey(_selected),
-                snapshot: widget.snapshot,
-                region: target == null
-                    ? const Rect.fromLTWH(0, 0, 1, 1)
-                    : componentInspectionRegion(target),
-                marks: _marks,
-                onMark: target != null && widget.kind != null ? _mark : null,
-              ),
-            ),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    if (_marks.isNotEmpty)
-                      Text(
-                        'Marked by you: ${[for (var i = 0; i < _marks.length; i++) _marks[i].name(i)].join(', ')}',
-                      ),
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        if (_marks.isNotEmpty)
-                          TextButton(
-                            onPressed: () => setState(() {
-                              _marks.removeLast();
-                            }),
-                            child: const Text('Undo last mark'),
-                          ),
-                        if (widget.kind != null)
-                          FilledButton(
-                            onPressed:
-                                _marks.isEmpty ||
-                                    (widget.requiredCount != null &&
-                                        _marks.length != widget.requiredCount)
-                                ? null
-                                : () => Navigator.pop(
-                                    context,
-                                    FastenerMap(
-                                      widget.snapshot,
-                                      _targets[_selected!],
-                                      _marks,
-                                    ),
-                                  ),
-                            child: const Text('Confirm mounting locations'),
-                          ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Return to live camera'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

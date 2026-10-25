@@ -1,6 +1,7 @@
 # Gavin and Aditya - Train a small local component detector from reviewed COCO data.
 import argparse
 import json
+import math
 import random
 from pathlib import Path
 
@@ -23,6 +24,13 @@ def build_model(classes, pretrained=False):
         compatible = {k: v for k, v in reference.items() if v.shape == current[k].shape}
         model.load_state_dict(compatible, strict=False)
     return model
+
+
+def load_initial_weights(model, classes, path):
+    checkpoint = torch.load(path, map_location="cpu", weights_only=True)
+    if checkpoint.get("classes") != classes:
+        raise ValueError("Initial checkpoint classes do not match the dataset.")
+    model.load_state_dict(checkpoint["state_dict"])
 
 
 class ComponentDataset(Dataset):
@@ -98,11 +106,17 @@ def main():
         action="store_true",
         help="Download official COCO initialization during training.",
     )
+    parser.add_argument("--initial-checkpoint", type=Path)
+    parser.add_argument("--learning-rate", type=float, default=0.001)
     parser.add_argument("--fine-tune", action="store_true")
     parser.add_argument("--focus-crops", action="store_true")
     args = parser.parse_args()
     if args.epochs < 1 or args.output.exists():
         parser.error("Use positive epochs and a new output directory.")
+    if not math.isfinite(args.learning_rate) or args.learning_rate <= 0:
+        parser.error("Learning rate must be finite and positive.")
+    if args.initial_checkpoint and args.pretrained:
+        parser.error("Choose an initial checkpoint or COCO initialization.")
     validate_dataset(args.labels, args.images, args.provenance)
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -123,12 +137,14 @@ def main():
         dataset, batch_size=4, shuffle=True, collate_fn=lambda batch: tuple(zip(*batch))
     )
     model = build_model(dataset.classes, args.pretrained)
+    if args.initial_checkpoint:
+        load_initial_weights(model, dataset.classes, args.initial_checkpoint)
     # Freeze general visual features and batch statistics for this small seed set.
     for parameter in model.backbone.parameters():
         parameter.requires_grad_(False)
     optimizer = torch.optim.AdamW(
         (p for p in model.parameters() if p.requires_grad),
-        lr=0.001,
+        lr=args.learning_rate,
         weight_decay=0.0005,
     )
     args.output.mkdir(parents=True)
@@ -138,7 +154,10 @@ def main():
             for parameter in model.backbone.parameters():
                 parameter.requires_grad_(True)
             optimizer.add_param_group(
-                {"params": model.backbone.parameters(), "lr": 0.0001}
+                {
+                    "params": model.backbone.parameters(),
+                    "lr": min(0.0001, args.learning_rate / 10),
+                }
             )
         model.train()
         model.backbone.eval()
@@ -165,6 +184,10 @@ def main():
             "epochs": args.epochs,
             "fine_tune": args.fine_tune,
             "focus_crops": args.focus_crops,
+            "learning_rate": args.learning_rate,
+            "initial_checkpoint": str(args.initial_checkpoint)
+            if args.initial_checkpoint
+            else None,
         },
         args.output / "detector.pt",
     )

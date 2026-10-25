@@ -77,6 +77,20 @@ void main() {
     },
   );
 
+  test('initial observations cannot claim an installation obstacle', () async {
+    const reply =
+        '{"intent":"replace","component":"ram",'
+        '"issue":"unknown","evidence":"Replace soldered RAM",'
+        '"obstacle":"none"}';
+    runtime.responses.addAll([
+      reply.replaceFirst('"none"', '"notRecognized"'),
+      reply,
+    ]);
+    final decision = await assistant.reason(['RAM'], 'Replace soldered RAM');
+    expect(decision.obstacle, RepairObstacle.none);
+    expect(runtime.generateCalls, 2);
+  });
+
   test('fit help cannot be confused with post-install detection', () async {
     const reply =
         '{"intent":"replace","component":"storage",'

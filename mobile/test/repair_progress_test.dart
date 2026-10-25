@@ -229,6 +229,25 @@ void main() {
     expect(nextLaptopRepairCard(progress).id, 'prepare_data');
   });
 
+  test('ordinary battery wear has useful guidance without a hazard claim', () {
+    progress.decision = const RepairDecision(
+      intent: RepairIntent.diagnose,
+      target: RepairTarget.battery,
+      issue: RepairIssue.batteryRuntime,
+      evidence: 'short battery life',
+    );
+    final card = nextLaptopRepairCard(progress);
+    expect(card.id, 'battery_runtime');
+    expect(card.detail, contains('capacity'));
+    progress.decision = const RepairDecision(
+      intent: RepairIntent.diagnose,
+      target: RepairTarget.battery,
+      issue: RepairIssue.batteryHazard,
+      evidence: 'swollen battery',
+    );
+    expect(nextLaptopRepairCard(progress).id, 'battery_stop');
+  });
+
   test('manual actions are recorded once with stable IDs', () {
     const card = RepairCard(
       id: 'isolate',

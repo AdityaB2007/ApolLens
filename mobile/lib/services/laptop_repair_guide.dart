@@ -39,6 +39,18 @@ RepairCard nextLaptopRepairCard(RepairProgress progress) {
       ),
     };
   }
+  if (decision.issue == RepairIssue.batteryRuntime) {
+    return const RepairCard(
+      id: 'battery_runtime',
+      title: 'Check battery condition',
+      detail:
+          'Save work. Use the operating system’s battery-health or power report '
+          'to note capacity, condition and whether it charges. Short runtime alone '
+          'does not mean swelling. Report the result and equipment model. '
+          'If swelling, unusual heat or a burning smell appears, stop using it.',
+      terminal: true,
+    );
+  }
   if (decision.issue == RepairIssue.bootMissing ||
       decision.issue == RepairIssue.bootConfiguration ||
       decision.target == RepairTarget.storage) {

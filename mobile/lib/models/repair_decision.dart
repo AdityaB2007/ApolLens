@@ -36,7 +36,7 @@ List<RepairObstacle> obstaclesForAction(String? action) {
   if (action?.endsWith('_remove') == true) {
     return const [RepairObstacle.none, RepairObstacle.unclearConnector];
   }
-  return RepairObstacle.values;
+  return const [RepairObstacle.none];
 }
 
 enum RepairIssue {
@@ -46,6 +46,7 @@ enum RepairIssue {
   fanNoise,
   overheating,
   batteryHazard,
+  batteryRuntime,
   unknown,
 }
 
@@ -118,7 +119,8 @@ final class RepairDecision {
       RepairIssue.bootConfiguration => RepairTarget.storage,
       RepairIssue.memoryErrors => RepairTarget.ram,
       RepairIssue.fanNoise => RepairTarget.fan,
-      RepairIssue.batteryHazard => RepairTarget.battery,
+      RepairIssue.batteryHazard ||
+      RepairIssue.batteryRuntime => RepairTarget.battery,
       _ => null,
     };
     if ((intent == RepairIntent.diagnose ||

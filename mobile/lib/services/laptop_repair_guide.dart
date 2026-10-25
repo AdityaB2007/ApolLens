@@ -43,7 +43,8 @@ RepairCard nextLaptopRepairCard(RepairProgress progress) {
       decision.issue == RepairIssue.bootConfiguration ||
       decision.target == RepairTarget.storage) {
     if (!progress.has(RepairFact.drivePresent) &&
-        !progress.has(RepairFact.driveAbsent)) {
+        !progress.has(RepairFact.driveAbsent) &&
+        !progress.has(RepairFact.verificationMatches)) {
       return const RepairCard(
         id: 'firmware_drive',
         title: 'Is the drive listed in firmware?',

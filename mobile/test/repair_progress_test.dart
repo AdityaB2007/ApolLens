@@ -72,6 +72,47 @@ void main() {
     expect(nextLaptopRepairCard(progress).id, 'storage_finish');
   });
 
+  test('SATA uses its confirmed plug and carrier instead of M.2 steps', () {
+    for (var i = 0; i < 3; i++) {
+      confirmLaptopRepairCard(progress, nextLaptopRepairCard(progress));
+    }
+    confirmLaptopRepairCard(
+      progress,
+      nextLaptopRepairCard(progress),
+      choice: RepairFact.sataDrive,
+    );
+    expect(nextLaptopRepairCard(progress).id, 'sata_connection');
+    confirmLaptopRepairCard(
+      progress,
+      nextLaptopRepairCard(progress),
+      choice: RepairFact.sataDriveEndPlug,
+    );
+    confirmLaptopRepairCard(
+      progress,
+      nextLaptopRepairCard(progress),
+      choice: RepairFact.sataCarrierScrews,
+    );
+    final actions = <String>[];
+    for (var i = 0; i < 10 && !nextLaptopRepairCard(progress).terminal; i++) {
+      final card = nextLaptopRepairCard(progress);
+      actions.add(card.id);
+      confirmLaptopRepairCard(
+        progress,
+        card,
+        choice: card.choices.containsValue(RepairFact.verificationMatches)
+            ? RepairFact.verificationMatches
+            : null,
+      );
+    }
+    expect(actions, contains('storage_carrier'));
+    expect(actions, isNot(contains('storage_retainer')));
+    expect(nextLaptopRepairCard(progress).id, 'storage_finish');
+    progress.decision = progress.decision.copyWith(
+      intent: RepairIntent.diagnose,
+    );
+    expect(nextLaptopRepairCard(progress).id, 'boot_entry');
+  });
+
   test('stale or fabricated cards cannot skip power isolation', () {
     final stale = storageReplacementCard(progress);
     confirmStorageCard(progress, stale);

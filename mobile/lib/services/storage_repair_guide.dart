@@ -2,6 +2,7 @@
 import '../models/repair_decision.dart';
 import '../models/repair_progress.dart';
 import 'storage_repair_steps.dart';
+import 'sata_repair_guide.dart';
 
 RepairCard storageReplacementCard(RepairProgress progress) {
   if (progress.decision.issue == RepairIssue.batteryHazard) {
@@ -26,16 +27,7 @@ RepairCard storageReplacementCard(RepairProgress progress) {
       terminal: true,
     );
   }
-  if (progress.has(RepairFact.sataDrive)) {
-    return const RepairCard(
-      id: 'storage_connector',
-      title: 'Show the drive connector',
-      detail:
-          'A cabled drive can use different ribbon latches and caddies. '
-          'Show the connector and mounting clearly before disconnecting them.',
-      terminal: true,
-    );
-  }
+  if (progress.has(RepairFact.sataDrive)) return sataReplacementCard(progress);
   if (!progress.has(RepairFact.m2Drive)) {
     return const RepairCard(
       id: 'storage_form',
@@ -43,7 +35,7 @@ RepairCard storageReplacementCard(RepairProgress progress) {
       detail: 'Match the actual storage hardware, not just the word SSD.',
       choices: {
         'Slim M.2 card': RepairFact.m2Drive,
-        'Cabled 2.5-inch drive': RepairFact.sataDrive,
+        '2.5-inch SATA drive': RepairFact.sataDrive,
         'Soldered chips': RepairFact.solderedStorage,
       },
     );

@@ -8,6 +8,8 @@ enum RepairFact {
   replacementReady,
   m2Drive,
   sataDrive,
+  sataDriveEndPlug,
+  sataCarrierScrews,
   solderedStorage,
   sodimmRam,
   solderedRam,

@@ -37,6 +37,10 @@ def build_model(classes, pretrained=False, image_size=320, small_anchors=False):
 
 
 def model_from_checkpoint(checkpoint):
+    if checkpoint.get("architecture") in ("yolox_nano", "yolox_tiny"):
+        from yolox_model import YOLOXDetector
+
+        return YOLOXDetector(checkpoint)
     model = build_model(
         checkpoint["classes"],
         image_size=checkpoint.get("image_size", 320),

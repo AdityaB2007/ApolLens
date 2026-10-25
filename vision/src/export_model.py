@@ -12,10 +12,10 @@ from train import model_from_checkpoint
 
 
 class ExportDetector(torch.nn.Module):
-    def __init__(self, model):
+    def __init__(self, model, image_size=None):
         super().__init__()
         self.model = model
-        self.image_size = model.transform.fixed_size[0]
+        self.image_size = image_size or model.transform.fixed_size[0]
 
     def forward(self, images):
         result = self.model([images[0]])[0]
@@ -35,7 +35,7 @@ def main():
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
     model = model_from_checkpoint(checkpoint)
     model.eval()
-    wrapper = ExportDetector(model)
+    wrapper = ExportDetector(model, checkpoint.get("image_size", 320))
     torch.manual_seed(123)
     size = checkpoint.get("image_size", 320)
     sample = torch.rand(1, 3, size, size)
@@ -58,7 +58,7 @@ def main():
         np.testing.assert_allclose(received, wanted, rtol=1e-3, atol=1e-4)
     manifest = {
         "schema_version": 1,
-        "architecture": "ssdlite320_mobilenet_v3_large",
+        "architecture": checkpoint.get("architecture", "ssdlite320_mobilenet_v3_large"),
         "sha256": hashlib.sha256(args.output.read_bytes()).hexdigest(),
         "classes": checkpoint["classes"],
         "input": {

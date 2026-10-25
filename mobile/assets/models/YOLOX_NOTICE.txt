@@ -1,0 +1,6 @@
+YOLOX source and COCO initialization: Copyright (c) 2021-2022 Megvii Inc.
+Official source: https://github.com/Megvii-BaseDetection/YOLOX
+Revision: 6ddff4824372906469a7fae2dc3206c7aa4bbaee
+The upstream Apache-2.0 terms are reproduced in YOLOX_LICENSE.txt.
+ApolLens modifies five device/dtype transfers for Metal; see yolox-mps.patch.
+Training photos retain their individual licenses and attribution in vision/data.

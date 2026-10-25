@@ -11,12 +11,13 @@ import 'instruction_audio.dart';
 import 'observation_notes.dart';
 
 class SessionGuide extends StatefulWidget {
-  const SessionGuide(
-      {super.key,
-      required this.procedure,
-      required this.itemId,
-      this.sessions,
-      this.speech});
+  const SessionGuide({
+    super.key,
+    required this.procedure,
+    required this.itemId,
+    this.sessions,
+    this.speech,
+  });
   final RepairProcedure procedure;
   final String itemId;
   final SessionService? sessions;
@@ -39,9 +40,10 @@ class _SessionGuideState extends State<SessionGuide> {
   void _start() {
     final random = Random.secure();
     _session = RepairSession(
-        id: base64Url.encode(List.generate(16, (_) => random.nextInt(256))),
-        itemId: widget.itemId,
-        procedure: widget.procedure);
+      id: base64Url.encode(List.generate(16, (_) => random.nextInt(256))),
+      itemId: widget.itemId,
+      procedure: widget.procedure,
+    );
     _index = 0;
     _saveAfterBuild();
   }
@@ -66,9 +68,10 @@ class _SessionGuideState extends State<SessionGuide> {
     setState(() {
       final ids = _session.procedure.steps.keys.toList();
       _session = _session.revise(
-          confirmedStepIds: _index == ids.length
-              ? []
-              : {..._session.confirmedStepIds, ids[_index]});
+        confirmedStepIds: _index == ids.length
+            ? []
+            : {..._session.confirmedStepIds, ids[_index]},
+      );
       _index = _index == ids.length ? 0 : _index + 1;
     });
     widget.sessions?.save(_session);
@@ -98,35 +101,50 @@ class _SessionGuideState extends State<SessionGuide> {
         SelectableText('Source: ${procedure.source}'),
         Text('Manual revision: ${procedure.revision}'),
         Text(
-            '${_session.confirmedStepIds.length} of ${steps.length} steps reviewed'),
+          '${_session.confirmedStepIds.length} of ${steps.length} steps reviewed',
+        ),
         LinearProgressIndicator(
-            value: _session.confirmedStepIds.length / steps.length),
+          value: _session.confirmedStepIds.length / steps.length,
+        ),
         const SizedBox(height: 16),
-        Text(complete ? 'Walkthrough complete' : step!.value.title,
-            style: Theme.of(context).textTheme.titleLarge),
-        Text(complete
-            ? 'Steps reviewed manually. Repair and safety are not verified.'
-            : step!.value.detail),
+        Text(
+          complete ? 'Walkthrough complete' : step!.value.title,
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        Text(
+          complete
+              ? 'Steps reviewed manually. Repair and safety are not verified.'
+              : step!.value.detail,
+        ),
         InstructionAudio(
-            key: ValueKey((_session.id, step?.key)),
-            speech: widget.speech,
-            text: complete
-                ? null
-                : '${step!.value.title}\n\n${step.value.detail}'),
-        Wrap(spacing: 12, runSpacing: 8, children: [
-          TextButton(
+          key: ValueKey((_session.id, step?.key)),
+          speech: widget.speech,
+          text: complete
+              ? null
+              : '${step!.value.title}\n\n${step.value.detail}',
+        ),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            TextButton(
               onPressed: _index == 0 || complete
                   ? null
                   : () => setState(() => _index--),
-              child: const Text('Previous')),
-          FilledButton(
+              child: const Text('Previous'),
+            ),
+            FilledButton(
               onPressed: _advance,
-              child: Text(complete
-                  ? 'Start again'
-                  : (_index == steps.length - 1
-                      ? 'Confirm and finish'
-                      : 'Confirm and next'))),
-        ]),
+              child: Text(
+                complete
+                    ? 'Start again'
+                    : (_index == steps.length - 1
+                          ? 'Confirm and finish'
+                          : 'Confirm and next'),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 16),
         // Keep unresolved notes through restart; a different item starts fresh.
         ObservationNotes(
@@ -148,19 +166,21 @@ class _SessionGuideState extends State<SessionGuide> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Semantics(
-                      liveRegion: true,
-                      child: Text(switch (state.status) {
-                        SessionSaveStatus.offline =>
-                          'Progress is local to this visit.',
-                        SessionSaveStatus.saving => 'Saving progress…',
-                        SessionSaveStatus.saved => 'Progress saved.',
-                        SessionSaveStatus.failed =>
-                          'Progress could not be saved.',
-                      })),
+                    liveRegion: true,
+                    child: Text(switch (state.status) {
+                      SessionSaveStatus.offline =>
+                        'Progress is local to this visit.',
+                      SessionSaveStatus.saving => 'Saving progress…',
+                      SessionSaveStatus.saved => 'Progress saved.',
+                      SessionSaveStatus.failed =>
+                        'Progress could not be saved.',
+                    }),
+                  ),
                   if (state.status == SessionSaveStatus.failed)
                     TextButton(
-                        onPressed: sessions.retry,
-                        child: const Text('Retry save')),
+                      onPressed: sessions.retry,
+                      child: const Text('Retry save'),
+                    ),
                 ],
               );
             },

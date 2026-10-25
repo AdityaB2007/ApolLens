@@ -79,8 +79,8 @@ class _ProcedureScreenState extends State<ProcedureScreen> {
                 onPressed: _stepIndex == 0 || complete
                     ? null
                     : () => setState(() {
-                          _stepIndex = (_stepIndex - 1).clamp(0, count);
-                        }),
+                        _stepIndex = (_stepIndex - 1).clamp(0, count);
+                      }),
                 child: const Text('Previous'),
               ),
               FilledButton(

@@ -14,11 +14,11 @@ final class CameraFrame {
     required this.orientation,
     required this.platform,
     required this.previewMirrored,
-  })  : capturedAt = capturedAt.toUtc(),
-        width = image.width,
-        height = image.height,
-        format = image.format.group,
-        rawFormat = image.format.raw as int {
+  }) : capturedAt = capturedAt.toUtc(),
+       width = image.width,
+       height = image.height,
+       format = image.format.group,
+       rawFormat = image.format.raw as int {
     final size = image.planes.fold(0, (n, plane) => n + plane.bytes.length);
     if (sessionId.trim().isEmpty ||
         sessionId != sessionId.trim() ||
@@ -61,11 +61,11 @@ final class CameraFrame {
 
 final class FramePlane {
   FramePlane._copy(Plane plane)
-      : bytes = Uint8List.fromList(plane.bytes).asUnmodifiableView(),
-        bytesPerRow = plane.bytesPerRow,
-        bytesPerPixel = plane.bytesPerPixel,
-        width = plane.width,
-        height = plane.height;
+    : bytes = Uint8List.fromList(plane.bytes).asUnmodifiableView(),
+      bytesPerRow = plane.bytesPerRow,
+      bytesPerPixel = plane.bytesPerPixel,
+      width = plane.width,
+      height = plane.height;
 
   final Uint8List bytes;
   // Preserve native strides and nullable dimensions; no pixel conversion here.
@@ -73,10 +73,8 @@ final class FramePlane {
   final int? bytesPerPixel, width, height;
 }
 
-typedef FrameRecognizer = Future<FrameRecognition> Function(
-  CameraFrame frame,
-  Future<void> cancel,
-);
+typedef FrameRecognizer =
+    Future<FrameRecognition> Function(CameraFrame frame, Future<void> cancel);
 
 final class FrameRecognition {
   FrameRecognition({
@@ -91,8 +89,10 @@ final class FrameRecognition {
         sessionId != sessionId.trim() ||
         sequence < 0 ||
         detections.length > 100 ||
-        !const [RecognitionStatus.unknown, RecognitionStatus.identified]
-            .contains(recognition.status) ||
+        !const [
+          RecognitionStatus.unknown,
+          RecognitionStatus.identified,
+        ].contains(recognition.status) ||
         (blocked &&
             (recognition.status != RecognitionStatus.unknown ||
                 detections.isNotEmpty))) {
@@ -111,8 +111,10 @@ final class FrameRecognition {
 
 // The adapter supplies the confirmed native preview transform, never a guess.
 final class FrameGeometry {
-  FrameGeometry(
-      {required this.clockwiseQuarterTurns, required this.previewCrop}) {
+  FrameGeometry({
+    required this.clockwiseQuarterTurns,
+    required this.previewCrop,
+  }) {
     if (clockwiseQuarterTurns < 0 ||
         clockwiseQuarterTurns > 3 ||
         !previewCrop.isFinite ||
@@ -137,7 +139,9 @@ final class FrameGeometry {
         source.width * previewCrop.width / (source.height * previewCrop.height);
     if (!viewport.isFinite ||
         viewport.isEmpty ||
-        (aspect / viewport.aspectRatio - 1).abs() > .01) return null;
+        (aspect / viewport.aspectRatio - 1).abs() > .01) {
+      return null;
+    }
     final visible = box.intersect(previewCrop);
     if (visible.isEmpty) return null;
     final left = (visible.left - previewCrop.left) / previewCrop.width;

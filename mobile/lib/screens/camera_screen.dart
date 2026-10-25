@@ -66,6 +66,9 @@ class _CameraScreenState extends State<CameraScreen>
             ? ResolutionPreset.medium
             : ResolutionPreset.low,
         enableAudio: false,
+        imageFormatGroup: defaultTargetPlatform == TargetPlatform.iOS
+            ? ImageFormatGroup.bgra8888
+            : ImageFormatGroup.yuv420,
       );
       _camera = camera;
       await camera.initialize();
@@ -93,10 +96,11 @@ class _CameraScreenState extends State<CameraScreen>
         'camera-${++_sessions}-${DateTime.now().microsecondsSinceEpoch}';
     var sequence = 0;
     var last = -250;
-    // The Android phone adapter preserves native planes; no image upload here.
+    // Android and iOS adapters preserve native planes; no image upload here.
     runZonedGuarded(() async {
       if (kIsWeb ||
-          defaultTargetPlatform != TargetPlatform.android ||
+          !(defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS) ||
           !camera.supportsImageStreaming()) {
         throw UnsupportedError('Image streaming unavailable.');
       }
@@ -104,19 +108,21 @@ class _CameraScreenState extends State<CameraScreen>
         if (!mounted || request != _request || _streamError != null) return;
         if (_cadence.elapsedMilliseconds - last < 250) return;
         last = _cadence.elapsedMilliseconds;
-        frames!.submit(CameraFrame.capture(
-          image: image,
-          sessionId: session,
-          sequence: sequence++,
-          capturedAt: DateTime.now(),
-          camera: camera.description,
-          orientation: camera.value.deviceOrientation,
-          platform: defaultTargetPlatform,
-          previewMirrored:
-              camera.description.lensDirection == CameraLensDirection.front,
-        ));
+        frames!.submit(
+          CameraFrame.capture(
+            image: image,
+            sessionId: session,
+            sequence: sequence++,
+            capturedAt: DateTime.now(),
+            camera: camera.description,
+            orientation: camera.value.deviceOrientation,
+            platform: defaultTargetPlatform,
+            previewMirrored:
+                camera.description.lensDirection == CameraLensDirection.front,
+          ),
+        );
       });
-    }, (_, __) => _streamFailed(camera, request));
+    }, (_, _) => _streamFailed(camera, request));
   }
 
   void _streamFailed(CameraController camera, int request) {
@@ -145,8 +151,9 @@ class _CameraScreenState extends State<CameraScreen>
     final frames = widget.frames;
     // Reset after widget updates finish, before any new camera can deliver frames.
     scheduleMicrotask(() => frames?.reset());
-    _closing =
-        (camera == null ? _closing : _release(camera)).catchError((_) {});
+    _closing = (camera == null ? _closing : _release(camera)).catchError(
+      (_) {},
+    );
   }
 
   @override
@@ -172,35 +179,43 @@ class _CameraScreenState extends State<CameraScreen>
     final frames = widget.frames;
     if (frames == null) return CameraPreview(camera);
     return ListenableBuilder(
-        listenable: Listenable.merge([frames, camera]),
-        builder: (context, _) {
-          final frame = frames.resultFrame;
-          final result = frames.result;
-          final aligned = frame?.orientation == camera.value.deviceOrientation;
-          return CameraPreview(camera,
-              child: DetectionOverlay(const SizedBox.expand(),
-                  aligned ? result?.detections ?? [] : [],
-                  frame: aligned ? frame : null,
-                  geometry: aligned ? result?.geometry : null));
-        });
+      listenable: Listenable.merge([frames, camera]),
+      builder: (context, _) {
+        final frame = frames.resultFrame;
+        final result = frames.result;
+        final aligned = frame?.orientation == camera.value.deviceOrientation;
+        return CameraPreview(
+          camera,
+          child: DetectionOverlay(
+            const SizedBox.expand(),
+            aligned ? result?.detections ?? [] : [],
+            frame: aligned ? frame : null,
+            geometry: aligned ? result?.geometry : null,
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final camera = _camera;
     return camera?.value.isInitialized == true
-        ? Column(children: [
-            Expanded(child: _preview(camera!)),
-            if (_streamError != null) ...[
-              Text(_streamError!, textAlign: TextAlign.center),
-              TextButton(
+        ? Column(
+            children: [
+              Expanded(child: _preview(camera!)),
+              if (_streamError != null) ...[
+                Text(_streamError!, textAlign: TextAlign.center),
+                TextButton(
                   onPressed: () {
                     _closeCamera();
                     _openCamera();
                   },
-                  child: const Text('Retry recognition')),
+                  child: const Text('Retry recognition'),
+                ),
+              ],
             ],
-          ])
+          )
         : SingleChildScrollView(
             child: Column(
               children: [

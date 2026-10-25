@@ -4,8 +4,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/repair_procedure.dart';
 
-typedef ProcedureLookup = Future<RepairProcedure?> Function(
-    String itemId, Future<void> cancel);
+typedef ProcedureLookup =
+    Future<RepairProcedure?> Function(String itemId, Future<void> cancel);
 
 enum ProcedureStatus { unavailable, loading, unsupported, ready, failed }
 

@@ -30,8 +30,9 @@ class _InstructionAudioState extends State<InstructionAudio>
   @override
   void didUpdateWidget(InstructionAudio oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.text == widget.text && oldWidget.speech == widget.speech)
+    if (oldWidget.text == widget.text && oldWidget.speech == widget.speech) {
       return;
+    }
     unawaited(oldWidget.speech?.stop(clear: true));
     _readInstruction();
   }
@@ -56,8 +57,9 @@ class _InstructionAudioState extends State<InstructionAudio>
     super.build(context);
     if (widget.text == null) return const SizedBox.shrink();
     final speech = widget.speech;
-    if (speech == null)
+    if (speech == null) {
       return const Text('Audio guidance is not connected yet.');
+    }
     return ValueListenableBuilder<SpeechStatus>(
       valueListenable: speech,
       builder: (context, status, _) {
@@ -80,19 +82,24 @@ class _InstructionAudioState extends State<InstructionAudio>
               children: [
                 TextButton(
                   onPressed: () => speech.setMuted(!speech.muted),
-                  child:
-                      Text(speech.muted ? 'Turn audio on' : 'Turn audio off'),
+                  child: Text(
+                    speech.muted ? 'Turn audio on' : 'Turn audio off',
+                  ),
                 ),
                 if (!speech.muted) ...[
                   if (status == SpeechStatus.loading)
                     TextButton(
-                        onPressed: speech.stop, child: const Text('Cancel'))
+                      onPressed: speech.stop,
+                      child: const Text('Cancel'),
+                    )
                   else
                     TextButton(
                       onPressed: speech.replay,
-                      child: Text(status == SpeechStatus.failed
-                          ? 'Retry audio'
-                          : 'Replay'),
+                      child: Text(
+                        status == SpeechStatus.failed
+                            ? 'Retry audio'
+                            : 'Replay',
+                      ),
                     ),
                   if (status == SpeechStatus.playing ||
                       status == SpeechStatus.paused)
@@ -100,7 +107,8 @@ class _InstructionAudioState extends State<InstructionAudio>
                       onPressed: () =>
                           speech.setPaused(status == SpeechStatus.playing),
                       child: Text(
-                          status == SpeechStatus.paused ? 'Resume' : 'Pause'),
+                        status == SpeechStatus.paused ? 'Resume' : 'Pause',
+                      ),
                     ),
                 ],
               ],

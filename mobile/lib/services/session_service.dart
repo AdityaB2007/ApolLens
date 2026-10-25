@@ -11,8 +11,8 @@ final class SessionReceipt {
 }
 
 // The adapter must make each session/revision idempotent and reject stale writes.
-typedef SessionWriter = Future<SessionReceipt> Function(
-    RepairSession session, Future<void> cancel);
+typedef SessionWriter =
+    Future<SessionReceipt> Function(RepairSession session, Future<void> cancel);
 
 enum SessionSaveStatus { offline, saving, saved, failed }
 
@@ -40,8 +40,10 @@ final class SessionService extends ValueNotifier<SessionSaveState> {
   Future<void> save(RepairSession session) {
     final previous = value.session;
     if (_disposed ||
-        (previous?.id == session.id && session.revision <= previous!.revision))
+        (previous?.id == session.id &&
+            session.revision <= previous!.revision)) {
       return Future.value();
+    }
     return _save(session);
   }
 
@@ -75,7 +77,8 @@ final class SessionService extends ValueNotifier<SessionSaveState> {
       if (receipt?.sessionId != session.id ||
           receipt?.revision != session.revision) {
         throw StateError(
-            'Session acknowledgement does not match the revision.');
+          'Session acknowledgement does not match the revision.',
+        );
       }
       value = SessionSaveState._(SessionSaveStatus.saved, session);
     } catch (_) {

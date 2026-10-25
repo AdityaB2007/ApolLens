@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 
 final class ApiService {
   ApiService(this.baseUri, this.token, {http.Client? client})
-      : _client = client ?? http.Client() {
+    : _client = client ?? http.Client() {
     if (!['http', 'https'].contains(baseUri.scheme) ||
         baseUri.host.isEmpty ||
         baseUri.userInfo.isNotEmpty ||

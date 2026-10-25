@@ -1,14 +1,19 @@
-// Gavin - Opens ApolLens on the camera without selecting an item first.
+// Gavin - Keep the camera first and route confirmed detections to local guidance.
 import 'dart:async';
-import '../services/frame_controller.dart';
-import 'package:flutter/material.dart';
-import '../widgets/session_guide.dart';
+
 import 'package:flutter/foundation.dart';
-import 'package:apollens/models/recognition_state.dart';
-import 'package:apollens/screens/camera_screen.dart';
-import 'package:apollens/services/speech_controller.dart';
-import 'package:apollens/services/procedure_service.dart';
-import 'package:apollens/services/session_service.dart';
+import 'package:flutter/material.dart';
+
+import '../models/recognition_state.dart';
+import '../services/frame_controller.dart';
+import '../services/local_repair_assistant.dart';
+import '../services/offline_speech_service.dart';
+import '../services/procedure_service.dart';
+import '../services/session_service.dart';
+import '../services/speech_controller.dart';
+import '../widgets/local_assistant_panel.dart';
+import '../widgets/session_guide.dart';
+import 'camera_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -18,14 +23,17 @@ class HomeScreen extends StatefulWidget {
     this.speech,
     this.procedures,
     this.sessions,
+    this.localAssistant,
+    this.offlineSpeech,
   });
 
-  // The session owner supplies and disposes the recognition service.
   final ValueListenable<RecognitionState>? recognition;
   final FrameController? frames;
   final SpeechController? speech;
   final ProcedureService? procedures;
   final SessionService? sessions;
+  final LocalRepairAssistant? localAssistant;
+  final OfflineSpeechService? offlineSpeech;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -55,8 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_itemId != itemId) {
       unawaited(widget.speech?.stop(clear: true));
       widget.sessions?.reset();
+      setState(() => _itemId = itemId);
     }
-    _itemId = itemId;
     unawaited(widget.procedures?.load(itemId));
   }
 
@@ -69,72 +77,103 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('ApolLens')),
-      // Keep the camera and status readable on smaller screens.
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Point your camera at the item',
-              style: Theme.of(context).textTheme.headlineSmall,
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('ApolLens')),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Point your camera at the item',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: SizedBox(
+              height: 320,
+              child: Center(child: CameraScreen(frames: widget.frames)),
             ),
-            const SizedBox(height: 16),
-            Card(
-              child: SizedBox(
-                  height: 320,
-                  child: Center(child: CameraScreen(frames: widget.frames))),
+          ),
+          const SizedBox(height: 24),
+          if (widget.recognition == null)
+            _status(RecognitionState.unavailable)
+          else
+            ValueListenableBuilder<RecognitionState>(
+              valueListenable: widget.recognition!,
+              builder: (context, state, _) => _status(state),
             ),
-            const SizedBox(height: 24),
-            if (widget.recognition == null)
-              _status(RecognitionState.unavailable)
-            else
-              ValueListenableBuilder<RecognitionState>(
-                valueListenable: widget.recognition!,
-                builder: (context, state, child) => _status(state),
-              ),
-            const SizedBox(height: 8),
-            _guidance(),
-          ],
-        ),
+          const SizedBox(height: 8),
+          _guidance(),
+        ],
       ),
-    );
-  }
+    ),
+  );
 
   Widget _guidance() {
     final procedures = widget.procedures;
-    if (procedures == null)
-      return const Text('Repair guidance is unavailable.');
+    if (procedures == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Repair guide lookup is unavailable.'),
+          _localAssistant(),
+        ],
+      );
+    }
     return ValueListenableBuilder<ProcedureState>(
       valueListenable: procedures,
       builder: (context, state, _) {
-        if (state.itemId != widget.recognition?.value.itemId) {
-          return const Text('Waiting for a matching repair guide.');
-        }
-        if (state.status == ProcedureStatus.ready) {
-          return SessionGuide(
-              procedure: state.procedure!,
-              itemId: state.itemId!,
-              sessions: widget.sessions,
-              speech: widget.speech);
-        }
-        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(switch (state.status) {
-            ProcedureStatus.loading => 'Loading repair guide…',
-            ProcedureStatus.unsupported =>
-              'No matching repair guide is available.',
-            ProcedureStatus.failed => 'Repair guide could not be loaded.',
-            _ => 'Repair guidance is unavailable.',
-          }),
-          if (state.status == ProcedureStatus.failed)
-            TextButton(
-                onPressed: () => procedures.load(state.itemId, retry: true),
-                child: const Text('Retry guide')),
-        ]);
+        final currentItem = widget.recognition?.value.itemId;
+        final guide = state.itemId != currentItem
+            ? const Text('Waiting for a matching repair guide.')
+            : switch (state.status) {
+                ProcedureStatus.ready => SessionGuide(
+                  procedure: state.procedure!,
+                  itemId: state.itemId!,
+                  sessions: widget.sessions,
+                  speech: widget.speech,
+                ),
+                ProcedureStatus.loading => const Text('Loading repair guide…'),
+                ProcedureStatus.unsupported => const Text(
+                  'No matching repair guide is available.',
+                ),
+                ProcedureStatus.failed => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Repair guide could not be loaded.'),
+                    TextButton(
+                      onPressed: () =>
+                          procedures.load(state.itemId, retry: true),
+                      child: const Text('Retry guide'),
+                    ),
+                  ],
+                ),
+                ProcedureStatus.unavailable => const Text(
+                  'Repair guidance is unavailable.',
+                ),
+              };
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [guide, _localAssistant()],
+        );
       },
+    );
+  }
+
+  Widget _localAssistant() {
+    final assistant = widget.localAssistant;
+    final speech = widget.offlineSpeech;
+    if (assistant == null || speech == null) {
+      return const Text('On-device assistant is unavailable.');
+    }
+    return LocalAssistantPanel(
+      key: ValueKey(_itemId),
+      assistant: assistant,
+      speech: speech,
+      itemId: _itemId,
+      frames: widget.frames,
+      procedures: widget.procedures,
     );
   }
 
@@ -143,26 +182,35 @@ class _HomeScreenState extends State<HomeScreen> {
     final notice = result?.blocked == true
         ? 'View is blocked. Clear the camera and try another angle.'
         : (widget.frames != null &&
-                result == null &&
-                state.status == RecognitionStatus.identified
-            ? 'Last recognized: ${state.label}'
-            : null);
-    final placementMissing = result != null &&
+                  result == null &&
+                  state.status == RecognitionStatus.identified
+              ? 'Last recognized: ${state.label}'
+              : null);
+    final placementMissing =
+        result != null &&
         result.detections.isNotEmpty &&
         result.geometry == null;
     return Semantics(
       liveRegion: true,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(notice ??
-            switch (state.status) {
-              RecognitionStatus.unavailable => 'Item recognition unavailable',
-              RecognitionStatus.identifying => 'Identifying item…',
-              RecognitionStatus.unknown =>
-                'Item not recognized. Try another angle.',
-              RecognitionStatus.identified => 'Detected: ${state.label}',
-            }),
-        if (placementMissing) const Text('Component positions unavailable.'),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            notice ??
+                switch (state.status) {
+                  RecognitionStatus.unavailable =>
+                    'Item recognition unavailable',
+                  RecognitionStatus.identifying => 'Identifying item…',
+                  RecognitionStatus.unknown =>
+                    result?.detections.isNotEmpty == true
+                        ? 'Components detected. Confirm them below.'
+                        : 'No components detected. Try another angle.',
+                  RecognitionStatus.identified => 'Detected: ${state.label}',
+                },
+          ),
+          if (placementMissing) const Text('Component positions unavailable.'),
+        ],
+      ),
     );
   }
 }

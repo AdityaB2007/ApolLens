@@ -9,22 +9,25 @@ final class RepairSession {
     this.revision = 0,
     Iterable<String> confirmedStepIds = const [],
     Map<String, String> observations = const {},
-  })  : confirmedStepIds = Set.unmodifiable(confirmedStepIds),
-        observations = Map.unmodifiable(observations) {
+  }) : confirmedStepIds = Set.unmodifiable(confirmedStepIds),
+       observations = Map.unmodifiable(observations) {
     if (id.trim().isEmpty ||
         id != id.trim() ||
         revision < 0 ||
         !procedure.supports(itemId)) {
       throw ArgumentError(
-          'Session identity, revision or matching item is invalid.');
+        'Session identity, revision or matching item is invalid.',
+      );
     }
     if (!this.confirmedStepIds.every(procedure.steps.containsKey)) {
       throw ArgumentError('Confirmed steps must belong to this procedure.');
     }
-    if (this.observations.entries.any((entry) =>
-        entry.key.trim().isEmpty ||
-        entry.key != entry.key.trim() ||
-        entry.value.trim().isEmpty)) {
+    if (this.observations.entries.any(
+      (entry) =>
+          entry.key.trim().isEmpty ||
+          entry.key != entry.key.trim() ||
+          entry.value.trim().isEmpty,
+    )) {
       throw ArgumentError('Observations need a stable ID and text.');
     }
   }
@@ -42,13 +45,12 @@ final class RepairSession {
   RepairSession revise({
     Iterable<String>? confirmedStepIds,
     Map<String, String>? observations,
-  }) =>
-      RepairSession(
-        id: id,
-        itemId: itemId,
-        procedure: procedure,
-        revision: revision + 1,
-        confirmedStepIds: confirmedStepIds ?? this.confirmedStepIds,
-        observations: observations ?? this.observations,
-      );
+  }) => RepairSession(
+    id: id,
+    itemId: itemId,
+    procedure: procedure,
+    revision: revision + 1,
+    confirmedStepIds: confirmedStepIds ?? this.confirmedStepIds,
+    observations: observations ?? this.observations,
+  );
 }

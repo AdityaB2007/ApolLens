@@ -9,15 +9,16 @@ final class RepairProcedure {
     required this.source,
     required Iterable<String> supportedItemIds,
     required Map<String, InspectionStep> steps,
-  })  : supportedItemIds = Set.unmodifiable(supportedItemIds),
-        steps = Map.unmodifiable(steps) {
+  }) : supportedItemIds = Set.unmodifiable(supportedItemIds),
+       steps = Map.unmodifiable(steps) {
     if (id.trim().isEmpty ||
         id != id.trim() ||
         revision.trim().isEmpty ||
         revision != revision.trim() ||
         title.trim().isEmpty) {
       throw ArgumentError(
-          'Procedure identity, revision and title are required.');
+        'Procedure identity, revision and title are required.',
+      );
     }
     if (!['http', 'https'].contains(source.scheme) ||
         source.host.isEmpty ||
@@ -25,19 +26,22 @@ final class RepairProcedure {
       throw ArgumentError('A manual source URL is required.');
     }
     if (this.supportedItemIds.isEmpty ||
-        this
-            .supportedItemIds
-            .any((id) => id.trim().isEmpty || id != id.trim())) {
+        this.supportedItemIds.any(
+          (id) => id.trim().isEmpty || id != id.trim(),
+        )) {
       throw ArgumentError('Supported item IDs must be explicit and nonempty.');
     }
     if (this.steps.isEmpty ||
-        this.steps.entries.any((entry) =>
-            entry.key.trim().isEmpty ||
-            entry.key != entry.key.trim() ||
-            entry.value.title.trim().isEmpty ||
-            entry.value.detail.trim().isEmpty)) {
+        this.steps.entries.any(
+          (entry) =>
+              entry.key.trim().isEmpty ||
+              entry.key != entry.key.trim() ||
+              entry.value.title.trim().isEmpty ||
+              entry.value.detail.trim().isEmpty,
+        )) {
       throw ArgumentError(
-          'Every procedure step needs an ID and written guidance.');
+        'Every procedure step needs an ID and written guidance.',
+      );
     }
   }
 

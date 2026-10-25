@@ -4,8 +4,13 @@ import '../models/detection.dart';
 import 'package:flutter/material.dart';
 
 class DetectionOverlay extends StatelessWidget {
-  const DetectionOverlay(this.child, this.boxes,
-      {super.key, this.frame, this.geometry});
+  const DetectionOverlay(
+    this.child,
+    this.boxes, {
+    super.key,
+    this.frame,
+    this.geometry,
+  });
   final Widget child;
   final List<Detection> boxes;
   final CameraFrame? frame;
@@ -13,13 +18,14 @@ class DetectionOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-        label: boxes.isEmpty
-            ? null
-            : 'Components: ${boxes.map((box) => box.label).join(', ')}',
-        child: CustomPaint(
-            child: child,
-            foregroundPainter: _DetectionPainter(boxes, frame, geometry)),
-      );
+    label: boxes.isEmpty
+        ? null
+        : 'Components: ${boxes.map((box) => box.label).join(', ')}',
+    child: CustomPaint(
+      foregroundPainter: _DetectionPainter(boxes, frame, geometry),
+      child: child,
+    ),
+  );
 }
 
 class _DetectionPainter extends CustomPainter {
@@ -44,23 +50,26 @@ class _DetectionPainter extends CustomPainter {
       if (box == null) continue;
       canvas.drawRect(box, paint);
       final label = TextPainter(
-          maxLines: 1,
-          ellipsis: '…',
-          textDirection: TextDirection.ltr,
-          text: TextSpan(
-              text: detection.label,
-              style: const TextStyle(
-                  fontSize: 14,
-                  fontFamily: 'Roboto',
-                  color: Colors.white,
-                  backgroundColor: Color(0xFFB3452E))))
-        ..layout(maxWidth: size.width);
+        maxLines: 1,
+        ellipsis: '…',
+        textDirection: TextDirection.ltr,
+        text: TextSpan(
+          text: detection.label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontFamily: 'Roboto',
+            color: Colors.white,
+            backgroundColor: Color(0xFFB3452E),
+          ),
+        ),
+      )..layout(maxWidth: size.width);
       label.paint(
-          canvas,
-          Offset(
-              box.left.clamp(0, size.width - label.width),
-              box.top.clamp(
-                  0, (size.height - label.height).clamp(0, size.height))));
+        canvas,
+        Offset(
+          box.left.clamp(0, size.width - label.width),
+          box.top.clamp(0, (size.height - label.height).clamp(0, size.height)),
+        ),
+      );
     }
     canvas.restore();
   }

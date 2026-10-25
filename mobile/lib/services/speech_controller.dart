@@ -31,10 +31,10 @@ final class SpeechController extends ValueNotifier<SpeechStatus> {
   bool get muted => _muted;
 
   SpeechStatus get _playbackStatus => switch (_playback.state) {
-        PlayerState.playing => SpeechStatus.playing,
-        PlayerState.paused => SpeechStatus.paused,
-        _ => SpeechStatus.idle,
-      };
+    PlayerState.playing => SpeechStatus.playing,
+    PlayerState.paused => SpeechStatus.paused,
+    _ => SpeechStatus.idle,
+  };
 
   void _onPlaybackState(PlayerState state) {
     // Queued events must still describe the current active audio.

@@ -13,13 +13,14 @@ final class AudioService {
       throw ArgumentError('An instruction is required.');
     }
     // Keep speech identical to the text shown on the phone.
-    final response = await _api.post(
-      '/api/audio/speak',
-      {'text': text},
-      cancel: cancel,
-    );
-    final contentType =
-        response.headers['content-type']?.split(';').first.trim().toLowerCase();
+    final response = await _api.post('/api/audio/speak', {
+      'text': text,
+    }, cancel: cancel);
+    final contentType = response.headers['content-type']
+        ?.split(';')
+        .first
+        .trim()
+        .toLowerCase();
     if (response.statusCode != 200 ||
         contentType != 'audio/mpeg' ||
         response.bodyBytes.isEmpty) {

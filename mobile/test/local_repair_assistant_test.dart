@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:apollens/models/inspection_step.dart';
+import 'package:apollens/models/repair_decision.dart';
 import 'package:apollens/models/repair_procedure.dart';
 import 'package:apollens/services/local_repair_assistant.dart';
 import 'package:apollens/services/offline_speech_service.dart';
@@ -21,6 +22,47 @@ void main() {
   });
 
   tearDown(() => assistant.dispose());
+
+  test('reasons over all parts and retries ungrounded evidence', () async {
+    const reply =
+        '{"intent":"replace","component":"storage",'
+        '"issue":"bootMissing","evidence":"replace the SSD"}';
+    runtime.responses.addAll([
+      reply.replaceAll('replace the SSD', 'failed a diagnostic'),
+      reply,
+    ]);
+    final decision = await assistant.reason(
+      ['RAM', 'Storage drive', 'Battery'],
+      'I want to replace the SSD.',
+      completedActions: ['startup_observed', 'usb_removed'],
+    );
+    expect(decision.intent, RepairIntent.replace);
+    expect(decision.target, RepairTarget.storage);
+    expect(runtime.generateCalls, 2);
+    final context = jsonDecode(runtime.lastPrompt!) as Map;
+    expect(context['observed_components'], ['RAM', 'Storage drive', 'Battery']);
+    expect(context['completed_actions'], ['startup_observed', 'usb_removed']);
+    expect(assistant.state.status, LocalAssistantStatus.ready);
+  });
+
+  test(
+    'cancel rejects a late reasoning result and preserves readiness',
+    () async {
+      runtime.pending = Completer<String>();
+      final request = assistant.reason([
+        'Storage drive',
+      ], 'boot device not found');
+      final canceled = expectLater(request, throwsStateError);
+      await Future<void>.delayed(Duration.zero);
+      await assistant.cancel();
+      runtime.pending!.complete(
+        '{"intent":"diagnose","component":"storage",'
+        '"issue":"bootMissing","evidence":"boot device not found"}',
+      );
+      await canceled;
+      expect(assistant.state.status, LocalAssistantStatus.ready);
+    },
+  );
 
   test('asks about symptoms without requiring a reference', () async {
     runtime.response = '{"question":"What happens when it runs?","checks":[]}';

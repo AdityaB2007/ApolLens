@@ -9,7 +9,8 @@ abstract interface class LocalModelRuntime {
 }
 
 // Flat schema choices constrain routing; physical actions remain app-owned.
-abstract interface class ConstrainedLocalModelRuntime {
+abstract interface class ConstrainedLocalModelRuntime
+    implements LocalModelRuntime {
   Future<String> generateConstrained(
     String systemInstruction,
     String prompt,

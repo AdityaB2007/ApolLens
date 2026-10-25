@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:apollens/main.dart';
+import 'package:apollens/models/repair_decision.dart';
+import 'package:apollens/models/repair_progress.dart';
+import 'package:apollens/widgets/repair_plan_panel.dart';
 import 'package:apollens/widgets/galaxy_background.dart';
 import 'package:apollens/services/local_repair_assistant.dart';
 import 'package:apollens/services/offline_speech_service.dart';
@@ -72,6 +75,65 @@ void main() {
     expect(painter.motion.value, reduced);
     expect(tester.binding.hasScheduledFrame, isFalse);
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('replacement controls keep text and recheck interrupted work', (
+    tester,
+  ) async {
+    final progress = RepairProgress(
+      const RepairDecision(
+        intent: RepairIntent.diagnose,
+        target: RepairTarget.storage,
+        issue: RepairIssue.bootMissing,
+        evidence: 'no boot device',
+      ),
+    );
+    final speech = OfflineSpeechService();
+    await speech.setMuted(true);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: RepairPlanPanel(
+              progress: progress,
+              speech: speech,
+              onTellMore: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.text('Help me replace the drive'));
+    await tester.tap(find.text('Help me replace the drive'));
+    await tester.pump();
+    expect(find.text('Protect your work'), findsOneWidget);
+    await tester.ensureVisible(find.text('Done'));
+    await tester.tap(find.text('Done'));
+    await tester.pump();
+    expect(find.text('Isolate power'), findsOneWidget);
+    await tester.ensureVisible(find.text('Done'));
+    await tester.tap(find.text('Done'));
+    await tester.pump();
+    expect(progress.has(RepairFact.powerIsolated), isTrue);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(find.text('Isolate power'), findsOneWidget);
+    expect(progress.has(RepairFact.powerIsolated), isFalse);
+    expect(progress.did('prepare_data'), isTrue);
+    expect(speech.status, OfflineSpeechStatus.muted);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    speech.dispose();
   });
 
   testWidgets('wires the local assistant into the camera-first app', (

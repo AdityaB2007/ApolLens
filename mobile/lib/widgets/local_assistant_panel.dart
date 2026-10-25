@@ -3,7 +3,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../models/inspection_step.dart';
+import '../models/repair_progress.dart';
+import '../models/repair_decision.dart';
+import 'repair_plan_panel.dart';
 import '../models/camera_frame.dart';
 import '../models/detection.dart';
 import '../models/recognition_state.dart';
@@ -33,14 +35,14 @@ class LocalAssistantPanel extends StatefulWidget {
   State<LocalAssistantPanel> createState() => _LocalAssistantPanelState();
 }
 
-class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
+class _LocalAssistantPanelState extends State<LocalAssistantPanel>
+    with WidgetsBindingObserver {
   final _symptoms = TextEditingController();
   final _observed = <String, ({int hits, DateTime lastSeen})>{};
   CameraFrame? _lastFrame;
-  List<InspectionStep> _steps = [];
-  List<InspectionStep> _previousChecks = [];
+  RepairProgress? _progress;
   List<String> _confirmedParts = const [];
-  int _conversation = 0, _stepIndex = 0;
+  int _conversation = 0;
   String? _question;
   String? _notice;
   String _reportedProblem = '';
@@ -51,6 +53,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.frames?.addListener(_onFrame);
     final guide = _currentGuide;
     _guideKey = guide == null ? null : '${guide.id}:${guide.revision}';
@@ -140,12 +143,10 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
     _lastFrame = null;
     _busy = false;
     _confirmedParts = const [];
-    _stepIndex = 0;
-    _steps = [];
+    _progress = null;
     _question = null;
     _notice = null;
     _reportedProblem = '';
-    _previousChecks = [];
     _awaitingSymptoms = false;
     _symptoms.clear();
     unawaited(widget.assistant.cancel());
@@ -159,7 +160,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
     setState(() {
       _confirmedParts = List.unmodifiable(parts);
       _notice = null;
-      _steps = [];
+      _progress = null;
       _question = 'What is wrong?';
       _awaitingSymptoms = true;
     });
@@ -187,47 +188,47 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
       _reportedProblem,
       response,
     ].where((part) => part.isNotEmpty).join('\n');
-    if (combined.length > 500) {
-      setState(
-        () => _notice =
-            'Keep the combined description within 500 characters, or start over.',
-      );
+    if (combined.length > 6000) {
+      setState(() => _notice = 'This conversation is full. Start a new scan.');
       return;
     }
-    final guide = _currentGuide;
+    final previous = _progress;
+    unawaited(widget.speech.stop());
     setState(() {
       _busy = true;
       _notice = null;
     });
     try {
-      final reply = await widget.assistant.describeProblem(
+      var decision = await widget.assistant.reason(
         _confirmedParts.map(componentName).toList(),
-        guide,
-        widget.itemId ?? '',
         combined,
-        previousSteps: _previousChecks,
+        completedActions: previous?.completedActions ?? const [],
       );
       if (!mounted || conversation != _conversation) return;
-      _reportedProblem = combined;
-      if (reply.steps.isNotEmpty) {
-        final chosen = reply.steps;
-        setState(() {
-          _steps = chosen;
-          _stepIndex = 0;
-          _question = null;
-          _awaitingSymptoms = false;
-          _symptoms.clear();
-        });
-        _showStep(0);
-      } else {
-        final question = reply.question ?? 'What else can you tell me?';
-        setState(() {
-          _question = question;
-          _awaitingSymptoms = true;
-          _symptoms.clear();
-        });
-        unawaited(widget.speech.speak(question));
-      }
+      setState(() {
+        _reportedProblem = combined;
+        if (previous != null &&
+            previous.decision.intent == RepairIntent.replace &&
+            previous.decision.target == decision.target &&
+            !previous.did('reassemble')) {
+          decision = RepairDecision(
+            intent: RepairIntent.replace,
+            target: decision.target,
+            issue: decision.issue,
+            evidence: decision.evidence,
+          );
+        }
+        if (previous == null ||
+            previous.did('reassemble') ||
+            previous.decision.target != decision.target) {
+          _progress = RepairProgress(decision);
+        } else {
+          previous.decision = decision;
+        }
+        _question = null;
+        _awaitingSymptoms = false;
+        _symptoms.clear();
+      });
     } catch (_) {
       if (mounted && conversation == _conversation) {
         setState(
@@ -241,10 +242,19 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
     }
   }
 
-  void _showStep(int index) {
-    setState(() => _stepIndex = index);
-    final step = _steps[index];
-    unawaited(widget.speech.speak('${step.title}. ${step.detail}'));
+  void _tellMore() {
+    _progress?.requireReadinessReview();
+    setState(() {
+      _question = 'What changed, or where are you stuck?';
+      _awaitingSymptoms = true;
+    });
+    unawaited(widget.speech.speak(_question!));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed || !_busy) return;
+    _cancelReply();
   }
 
   Future<void> _install() async {
@@ -253,6 +263,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.frames?.removeListener(_onFrame);
     _conversation++;
     unawaited(widget.assistant.cancel());
@@ -284,17 +295,15 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _steps.isNotEmpty
-              ? 'Suggested checks'
-              : _confirmedParts.isNotEmpty
-              ? 'Troubleshoot'
-              : _looksLikeLaptop
-              ? 'This appears to be a laptop computer'
-              : 'Detected parts',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 8),
+        if (_confirmedParts.isEmpty) ...[
+          Text(
+            _looksLikeLaptop
+                ? 'This appears to be a laptop computer'
+                : 'Detected parts',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+        ],
 
         if (state.status == LocalAssistantStatus.checking)
           const LinearProgressIndicator(),
@@ -361,9 +370,9 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
                 enabled: !_busy,
                 minLines: 1,
                 maxLines: 4,
-                maxLength: 500,
+                maxLength: 1200,
                 decoration: const InputDecoration(
-                  labelText: 'What’s wrong?',
+                  labelText: 'Describe the problem',
                   hintText: 'For example, it shuts down unexpectedly',
                   border: OutlineInputBorder(),
                 ),
@@ -391,47 +400,12 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
               ),
             ],
           ],
-          if (_steps.isNotEmpty) ...[
-            Text('Step ${_stepIndex + 1} of ${_steps.length}'),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(_steps[_stepIndex].title),
-              subtitle: Text(_steps[_stepIndex].detail),
+          if (_progress != null && !_awaitingSymptoms && !_busy)
+            RepairPlanPanel(
+              progress: _progress!,
+              speech: widget.speech,
+              onTellMore: _tellMore,
             ),
-            Wrap(
-              spacing: 8,
-              children: [
-                TextButton(
-                  onPressed: _stepIndex == 0
-                      ? null
-                      : () => _showStep(_stepIndex - 1),
-                  child: const Text('Back'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    if (_stepIndex + 1 < _steps.length) {
-                      _showStep(_stepIndex + 1);
-                    } else {
-                      setState(() {
-                        _previousChecks = List.unmodifiable([
-                          ..._previousChecks,
-                          ..._steps,
-                        ]);
-                        _steps = [];
-                        _question = 'What changed after those checks?';
-                        _notice = null;
-                        _awaitingSymptoms = true;
-                      });
-                      unawaited(widget.speech.speak(_question!));
-                    }
-                  },
-                  child: Text(
-                    _stepIndex + 1 < _steps.length ? 'Next' : 'Check result',
-                  ),
-                ),
-              ],
-            ),
-          ],
 
           if (_busy || state.status == LocalAssistantStatus.generating)
             Semantics(

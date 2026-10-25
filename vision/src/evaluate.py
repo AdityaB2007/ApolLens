@@ -6,7 +6,7 @@ from pathlib import Path
 
 import torch
 from torchvision.ops import box_iou
-from train import ComponentDataset, build_model
+from train import ComponentDataset, model_from_checkpoint
 from validate_dataset import validate_dataset
 
 
@@ -88,20 +88,20 @@ def main():
     if not 0 <= args.threshold <= 1:
         parser.error("Threshold must be between zero and one.")
     validate_dataset(args.labels, args.images, args.provenance)
+    checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
     dataset = ComponentDataset(
         json.loads(args.labels.read_text()),
         args.images,
         json.loads(args.provenance.read_text()),
         args.split,
+        image_size=checkpoint.get("image_size", 320),
     )
     if not len(dataset):
         parser.error("The selected split is empty.")
-    checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
     if checkpoint["classes"] != dataset.classes:
         parser.error("Checkpoint classes do not match the annotations.")
     torch.set_num_threads(4)
-    model = build_model(dataset.classes)
-    model.load_state_dict(checkpoint["state_dict"])
+    model = model_from_checkpoint(checkpoint)
     model.eval()
     predictions, targets, elapsed = [], [], []
     with torch.inference_mode():

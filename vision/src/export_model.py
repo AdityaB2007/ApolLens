@@ -8,17 +8,18 @@ import numpy as np
 import onnx
 import onnxruntime as ort
 import torch
-from train import build_model
+from train import model_from_checkpoint
 
 
 class ExportDetector(torch.nn.Module):
     def __init__(self, model):
         super().__init__()
         self.model = model
+        self.image_size = model.transform.fixed_size[0]
 
     def forward(self, images):
         result = self.model([images[0]])[0]
-        return result["boxes"] / 320.0, result["scores"], result["labels"]
+        return result["boxes"] / self.image_size, result["scores"], result["labels"]
 
 
 def main():
@@ -32,12 +33,12 @@ def main():
         parser.error("Choose a new output model path.")
     torch.set_num_threads(4)
     checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=True)
-    model = build_model(checkpoint["classes"])
-    model.load_state_dict(checkpoint["state_dict"])
+    model = model_from_checkpoint(checkpoint)
     model.eval()
     wrapper = ExportDetector(model)
     torch.manual_seed(123)
-    sample = torch.rand(1, 3, 320, 320)
+    size = checkpoint.get("image_size", 320)
+    sample = torch.rand(1, 3, size, size)
     with torch.inference_mode():
         expected = [value.numpy() for value in wrapper(sample)]
         torch.onnx.export(
@@ -63,7 +64,7 @@ def main():
         "input": {
             "name": "images",
             "dtype": "float32",
-            "shape": [1, 3, 320, 320],
+            "shape": [1, 3, size, size],
             "color": "RGB",
             "range": [0, 1],
             "resize": "bilinear stretch upright image",

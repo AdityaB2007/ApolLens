@@ -83,8 +83,12 @@ class OnnxDetector:
             or inputs[0].type != "tensor(float)"
         ):
             raise ValueError("Expected one float32 images input.")
-        if inputs[0].shape != [1, 3, 320, 320]:
-            raise ValueError("Expected fixed NCHW 320x320 input.")
+        shape = inputs[0].shape
+        if shape not in ([1, 3, 320, 320], [1, 3, 640, 640]):
+            raise ValueError("Expected fixed NCHW 320x320 or 640x640 input.")
+        if manifest.get("input", {}).get("shape") != shape:
+            raise ValueError("Model input shape differs from its manifest.")
+        self.image_size = shape[2]
         if {output.name for output in self._session.get_outputs()} != {
             "boxes",
             "scores",
@@ -99,7 +103,9 @@ class OnnxDetector:
         with Image.open(image_path) as original:
             image = ImageOps.exif_transpose(original).convert("RGB")
             width, height = image.size
-            resized = image.resize((320, 320), Image.Resampling.BILINEAR)
+            resized = image.resize(
+                (self.image_size, self.image_size), Image.Resampling.BILINEAR
+            )
             tensor = (
                 np.asarray(resized, dtype=np.float32).transpose(2, 0, 1)[None] / 255
             )

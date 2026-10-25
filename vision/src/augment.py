@@ -5,18 +5,18 @@ import torch
 from PIL import Image
 
 
-def focus_crop(image, boxes, labels):
+def focus_crop(image, boxes, labels, size=320):
     candidates = torch.where(labels >= 3)[0].tolist()
     if not candidates:
         return image, boxes, labels
     selected = boxes[random.choice(candidates)]
     margin = random.uniform(0.3, 1.0)
     width, height = (selected[2:] - selected[:2]).tolist()
-    left = max(0, int((selected[0] - width * margin) * 320))
-    top = max(0, int((selected[1] - height * margin) * 320))
-    right = min(320, int((selected[2] + width * margin) * 320) + 1)
-    bottom = min(320, int((selected[3] + height * margin) * 320) + 1)
-    pixels = boxes * 320
+    left = max(0, int((selected[0] - width * margin) * image.width))
+    top = max(0, int((selected[1] - height * margin) * image.height))
+    right = min(image.width, int((selected[2] + width * margin) * image.width) + 1)
+    bottom = min(image.height, int((selected[3] + height * margin) * image.height) + 1)
+    pixels = boxes * torch.tensor([image.width, image.height] * 2)
     clipped = pixels.clone()
     clipped[:, [0, 2]] = clipped[:, [0, 2]].clamp(left, right)
     clipped[:, [1, 3]] = clipped[:, [1, 3]].clamp(top, bottom)
@@ -26,6 +26,6 @@ def focus_crop(image, boxes, labels):
     clipped -= torch.tensor([left, top, left, top])
     clipped /= torch.tensor([right - left, bottom - top, right - left, bottom - top])
     image = image.crop((left, top, right, bottom)).resize(
-        (320, 320), Image.Resampling.BILINEAR
+        (size, size), Image.Resampling.BILINEAR
     )
     return image, clipped[keep], labels[keep]

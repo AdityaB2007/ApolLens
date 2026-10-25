@@ -29,3 +29,12 @@ def focus_crop(image, boxes, labels, size=320):
     if size is not None:
         image = image.resize((size, size), Image.Resampling.BILINEAR)
     return image, clipped[keep], labels[keep]
+
+
+def rotate_quarter(image, boxes, turns):
+    for _ in range(turns % 4):
+        image = image.transpose(Image.Transpose.ROTATE_90)
+        boxes = torch.stack(
+            (boxes[:, 1], 1 - boxes[:, 2], boxes[:, 3], 1 - boxes[:, 0]), dim=1
+        )
+    return image, boxes

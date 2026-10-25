@@ -6,7 +6,7 @@ import random
 from pathlib import Path
 
 import torch
-from augment import focus_crop
+from augment import focus_crop, rotate_quarter
 from image_geometry import letterbox
 from PIL import Image, ImageEnhance, ImageOps
 from torch.utils.data import DataLoader, Dataset
@@ -111,6 +111,7 @@ class ComponentDataset(Dataset):
                 (self.image_size, self.image_size), Image.Resampling.BILINEAR
             )
         if self.augment:
+            image, boxes = rotate_quarter(image, boxes, random.randrange(4))
             image = ImageEnhance.Brightness(image).enhance(random.uniform(0.8, 1.2))
             if random.random() < 0.5:
                 image = ImageOps.mirror(image)
@@ -130,6 +131,30 @@ class ComponentDataset(Dataset):
         }
 
 
+def save_checkpoint(model, classes, args, epochs, path):
+    torch.save(
+        {
+            "state_dict": {
+                key: value.cpu() for key, value in model.state_dict().items()
+            },
+            "classes": classes,
+            "seed": args.seed,
+            "epochs": epochs,
+            "fine_tune": args.fine_tune,
+            "focus_crops": args.focus_crops,
+            "learning_rate": args.learning_rate,
+            "image_size": args.image_size,
+            "letterbox": args.letterbox,
+            "small_anchors": args.small_anchors,
+            "device": args.device,
+            "initial_checkpoint": str(args.initial_checkpoint)
+            if args.initial_checkpoint
+            else None,
+        },
+        path,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Train reviewed local COCO annotations."
@@ -139,6 +164,7 @@ def main():
     parser.add_argument("--provenance", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--epochs", type=int, default=80)
+    parser.add_argument("--checkpoint-every", type=int, default=0)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument(
         "--pretrained",
@@ -156,6 +182,8 @@ def main():
     args = parser.parse_args()
     if args.device == "mps" and not torch.backends.mps.is_available():
         parser.error("Metal training is unavailable on this host.")
+    if args.checkpoint_every < 0:
+        parser.error("Checkpoint interval cannot be negative.")
     if args.epochs < 1 or args.output.exists():
         parser.error("Use positive epochs and a new output directory.")
     if not math.isfinite(args.learning_rate) or args.learning_rate <= 0:
@@ -231,26 +259,16 @@ def main():
             losses.append(loss.item())
         history.append({"epoch": epoch + 1, "loss": sum(losses) / len(losses)})
         print(json.dumps(history[-1]), flush=True)
-    torch.save(
-        {
-            "state_dict": {
-                key: value.cpu() for key, value in model.state_dict().items()
-            },
-            "classes": dataset.classes,
-            "seed": args.seed,
-            "epochs": args.epochs,
-            "fine_tune": args.fine_tune,
-            "focus_crops": args.focus_crops,
-            "learning_rate": args.learning_rate,
-            "image_size": args.image_size,
-            "letterbox": args.letterbox,
-            "small_anchors": args.small_anchors,
-            "device": args.device,
-            "initial_checkpoint": str(args.initial_checkpoint)
-            if args.initial_checkpoint
-            else None,
-        },
-        args.output / "detector.pt",
+        if args.checkpoint_every and (epoch + 1) % args.checkpoint_every == 0:
+            save_checkpoint(
+                model,
+                dataset.classes,
+                args,
+                epoch + 1,
+                args.output / f"epoch-{epoch + 1:04d}.pt",
+            )
+    save_checkpoint(
+        model, dataset.classes, args, args.epochs, args.output / "detector.pt"
     )
     (args.output / "training.json").write_text(json.dumps(history, indent=2) + "\n")
 

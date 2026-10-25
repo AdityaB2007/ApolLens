@@ -1,0 +1,75 @@
+import 'dart:convert';
+import 'package:apollens/models/repair_decision.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  String reply({
+    String intent = 'diagnose',
+    String evidence = 'boot device not found',
+  }) => jsonEncode({
+    'intent': intent,
+    'component': 'storage',
+    'issue': 'bootMissing',
+    'evidence': evidence,
+  });
+  test('accepts bounded classification with actual symptom evidence', () {
+    final decision = RepairDecision.decode(
+      reply(),
+      'It says boot device not found.',
+    );
+    expect(decision.intent, RepairIntent.diagnose);
+    expect(decision.target, RepairTarget.storage);
+    expect(decision.issue, RepairIssue.bootMissing);
+  });
+  test('preserves replacement intent without asserting proof of a fault', () {
+    final decision = RepairDecision.decode(
+      reply(intent: 'replace', evidence: 'I want to replace my SSD'),
+      'I want to replace my SSD. It might still work.',
+    );
+    expect(decision.intent, RepairIntent.replace);
+  });
+  test('rejects invented evidence and instructions outside the schema', () {
+    expect(
+      () => RepairDecision.decode(
+        reply(evidence: 'failed diagnostic'),
+        'boot device not found',
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () => RepairDecision.decode(
+        '{"steps":["Pull out the drive"]}',
+        'boot device not found',
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () => RepairDecision.decode(
+        reply(intent: 'remove_live_hardware'),
+        'boot device not found',
+      ),
+      throwsFormatException,
+    );
+    expect(
+      () => RepairDecision.decode(reply(evidence: ''), 'boot device not found'),
+      throwsFormatException,
+    );
+  });
+  test(
+    'normalizes whitespace and case without accepting paraphrased facts',
+    () {
+      final decision = RepairDecision.decode(
+        reply(evidence: 'Boot device\nnot found'),
+        'boot device not found',
+      );
+      expect(decision.target, RepairTarget.storage);
+      expect(
+        () => RepairDecision.decode(
+          reply(evidence: 'The SSD is faulty'),
+          'The SSD is absent from setup',
+        ),
+        throwsFormatException,
+      );
+    },
+  );
+}

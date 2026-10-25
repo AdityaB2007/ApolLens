@@ -250,10 +250,14 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
         _symptoms.clear();
       });
       _publishFocus();
-    } catch (_) {
+    } catch (error) {
       if (mounted && conversation == _conversation) {
         setState(
-          () => _notice = 'The local model could not respond. Please retry.',
+          () => _notice = error is FormatException
+              ? 'I couldn’t choose a clear next step. Add an exact error or a new observation.'
+              : error is TimeoutException
+              ? 'The local model took too long. Your description is still here; try again.'
+              : 'The local model could not respond. Please retry.',
         );
       }
     } finally {
@@ -408,24 +412,26 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
             if (_awaitingSymptoms) ...[
               TextField(
                 controller: _symptoms,
-                enabled: !_busy,
+                readOnly: _busy,
                 minLines: 1,
                 maxLines: 4,
                 maxLength: 1200,
                 decoration: const InputDecoration(
                   labelText: 'Describe the problem',
+                  counterText: '',
                   hintText: 'For example, it shuts down unexpectedly',
                   border: OutlineInputBorder(),
                 ),
                 onSubmitted: (_) => _sendSymptoms(),
               ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton(
-                  onPressed: _busy ? null : _sendSymptoms,
-                  child: Text(_busy ? 'Thinking…' : 'Find next steps'),
+              if (!_busy)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton(
+                    onPressed: _sendSymptoms,
+                    child: const Text('Find next steps'),
+                  ),
                 ),
-              ),
             ],
           ],
           if (_progress != null && _awaitingSymptoms && !_busy)
@@ -450,18 +456,25 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
           if (_busy || state.status == LocalAssistantStatus.generating)
             Semantics(
               liveRegion: true,
-              child: Row(
+              child: Wrap(
+                spacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      semanticsLabel: 'Generating a response',
-                    ),
+                  const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          semanticsLabel: 'Generating a response',
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Flexible(child: Text('Thinking…')),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  const Expanded(child: Text('Thinking on this device…')),
                   TextButton(
                     onPressed: _cancelReply,
                     child: const Text('Cancel'),

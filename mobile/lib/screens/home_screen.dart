@@ -122,7 +122,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [_guidance(), const GalaxyCredit()],
                 ),
               );
-              if (constraints.maxWidth > constraints.maxHeight) {
+              // Opening the keyboard must not switch a portrait camera to a side panel.
+              if (MediaQuery.orientationOf(context) == Orientation.landscape) {
                 return Row(
                   children: [
                     Expanded(

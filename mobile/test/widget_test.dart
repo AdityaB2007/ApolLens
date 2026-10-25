@@ -197,6 +197,7 @@ void main() {
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetViewInsets);
         await tester.pumpWidget(
           ApolLensApp(
             localAssistant: LocalRepairAssistant(runtime: _TestModelRuntime()),
@@ -218,6 +219,10 @@ void main() {
               .pixels,
           greaterThan(0),
         );
+        tester.view.viewInsets = FakeViewPadding(bottom: size.height * .6);
+        await tester.pumpAndSettle();
+        expect(tester.getRect(find.byType(CameraScreen)).width, before.width);
+        expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       },
     );
@@ -255,6 +260,12 @@ void main() {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     final semantics = tester.ensureSemantics();
     try {
       final pending = Completer<String>();
@@ -279,11 +290,11 @@ void main() {
         find.bySemanticsLabel(RegExp('Generating a response')),
         findsOneWidget,
       );
-      expect(find.text('Thinking on this device…'), findsOneWidget);
+      expect(find.text('Thinking…'), findsOneWidget);
       await tester.ensureVisible(find.text('Cancel'));
       await tester.tap(find.text('Cancel'));
       await tester.pump();
-      expect(find.text('Thinking on this device…'), findsNothing);
+      expect(find.text('Thinking…'), findsNothing);
       pending.complete('{"checks":["startup"]}');
       await canceled;
       await tester.pump();

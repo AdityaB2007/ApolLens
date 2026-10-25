@@ -67,10 +67,15 @@ def main():
             "shape": [1, 3, size, size],
             "color": "RGB",
             "range": [0, 1],
-            "resize": "bilinear stretch upright image",
+            "resize": "letterbox"
+            if checkpoint.get("letterbox")
+            else "bilinear stretch upright image",
+            "padding": 114 if checkpoint.get("letterbox") else None,
         },
         "outputs": {
-            "boxes": "upright_normalized_xyxy",
+            "boxes": "letterbox_normalized_xyxy"
+            if checkpoint.get("letterbox")
+            else "upright_normalized_xyxy",
             "scores": "float32",
             "labels": "int64 indices into classes",
         },

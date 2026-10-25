@@ -7,6 +7,7 @@ from pathlib import Path
 
 import torch
 from augment import focus_crop
+from image_geometry import letterbox
 from PIL import Image, ImageEnhance, ImageOps
 from torch.utils.data import DataLoader, Dataset
 from torchvision.models.detection import ssdlite320_mobilenet_v3_large
@@ -61,6 +62,7 @@ class ComponentDataset(Dataset):
         augment=False,
         focus_crops=False,
         image_size=320,
+        letterboxed=False,
     ):
         self.root = Path(images)
         self.classes = ["__background__"] + [c["name"] for c in labels["categories"]]
@@ -69,6 +71,7 @@ class ComponentDataset(Dataset):
         self.augment = augment
         self.focus_crops = focus_crops
         self.image_size = image_size
+        self.letterboxed = letterboxed
         for image in labels["images"]:
             if provenance[image["file_name"]]["split"] != split:
                 continue
@@ -98,11 +101,15 @@ class ComponentDataset(Dataset):
         classes = torch.tensor(classes, dtype=torch.int64)
         if self.augment and self.focus_crops and random.random() < 0.65:
             image, boxes, classes = focus_crop(
-                image, boxes, classes, size=self.image_size
+                image,
+                boxes,
+                classes,
+                size=None if self.letterboxed else self.image_size,
             )
-        image = image.resize(
-            (self.image_size, self.image_size), Image.Resampling.BILINEAR
-        )
+        if not self.letterboxed:
+            image = image.resize(
+                (self.image_size, self.image_size), Image.Resampling.BILINEAR
+            )
         if self.augment:
             image = ImageEnhance.Brightness(image).enhance(random.uniform(0.8, 1.2))
             if random.random() < 0.5:
@@ -111,8 +118,13 @@ class ComponentDataset(Dataset):
             if random.random() < 0.25:
                 image = ImageOps.flip(image)
                 boxes[:, [1, 3]] = 1 - boxes[:, [3, 1]]
+        target_boxes = boxes * self.image_size
+        if self.letterboxed:
+            image, (left, top, width, height) = letterbox(image, self.image_size)
+            target_boxes = boxes * torch.tensor([width, height] * 2)
+            target_boxes += torch.tensor([left, top] * 2)
         return pil_to_tensor(image).float() / 255, {
-            "boxes": boxes * self.image_size,
+            "boxes": target_boxes,
             "labels": classes,
             "image_id": torch.tensor(record["id"]),
         }
@@ -139,6 +151,7 @@ def main():
     parser.add_argument("--focus-crops", action="store_true")
     parser.add_argument("--image-size", type=int, choices=(320, 640), default=320)
     parser.add_argument("--small-anchors", action="store_true")
+    parser.add_argument("--letterbox", action="store_true")
     parser.add_argument("--device", choices=("cpu", "mps"), default="cpu")
     args = parser.parse_args()
     if args.device == "mps" and not torch.backends.mps.is_available():
@@ -163,6 +176,7 @@ def main():
         augment=True,
         focus_crops=args.focus_crops,
         image_size=args.image_size,
+        letterboxed=args.letterbox,
     )
     if len(dataset) < 2:
         parser.error("At least two reviewed training images are required.")
@@ -229,6 +243,7 @@ def main():
             "focus_crops": args.focus_crops,
             "learning_rate": args.learning_rate,
             "image_size": args.image_size,
+            "letterbox": args.letterbox,
             "small_anchors": args.small_anchors,
             "device": args.device,
             "initial_checkpoint": str(args.initial_checkpoint)

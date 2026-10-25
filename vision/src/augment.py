@@ -25,7 +25,7 @@ def focus_crop(image, boxes, labels, size=320):
     keep = visible >= 0.6
     clipped -= torch.tensor([left, top, left, top])
     clipped /= torch.tensor([right - left, bottom - top, right - left, bottom - top])
-    image = image.crop((left, top, right, bottom)).resize(
-        (size, size), Image.Resampling.BILINEAR
-    )
+    image = image.crop((left, top, right, bottom))
+    if size is not None:
+        image = image.resize((size, size), Image.Resampling.BILINEAR)
     return image, clipped[keep], labels[keep]

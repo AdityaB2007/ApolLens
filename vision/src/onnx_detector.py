@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
+from image_geometry import letterbox, source_boxes
 from PIL import Image, ImageOps
 
 
@@ -89,6 +90,16 @@ class OnnxDetector:
         if manifest.get("input", {}).get("shape") != shape:
             raise ValueError("Model input shape differs from its manifest.")
         self.image_size = shape[2]
+        resize = manifest["input"].get("resize", "bilinear stretch upright image")
+        if resize not in (
+            "letterbox",
+            "bilinear stretch upright image",
+            "stretch upright image",
+        ):
+            raise ValueError("Unsupported image preprocessing contract.")
+        self.letterboxed = resize == "letterbox"
+        if self.letterboxed and manifest["input"].get("padding") != 114:
+            raise ValueError("Unsupported letterbox padding value.")
         if {output.name for output in self._session.get_outputs()} != {
             "boxes",
             "scores",
@@ -103,15 +114,20 @@ class OnnxDetector:
         with Image.open(image_path) as original:
             image = ImageOps.exif_transpose(original).convert("RGB")
             width, height = image.size
-            resized = image.resize(
-                (self.image_size, self.image_size), Image.Resampling.BILINEAR
-            )
+            if self.letterboxed:
+                resized, geometry = letterbox(image, self.image_size)
+            else:
+                resized = image.resize(
+                    (self.image_size, self.image_size), Image.Resampling.BILINEAR
+                )
             tensor = (
                 np.asarray(resized, dtype=np.float32).transpose(2, 0, 1)[None] / 255
             )
         boxes, scores, labels = self._session.run(
             ["boxes", "scores", "labels"], {"images": tensor}
         )
+        if self.letterboxed:
+            boxes = source_boxes(boxes, geometry, self.image_size)
         return {
             "schema_version": 1,
             "image_width": width,

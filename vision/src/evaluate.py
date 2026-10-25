@@ -95,6 +95,7 @@ def main():
         json.loads(args.provenance.read_text()),
         args.split,
         image_size=checkpoint.get("image_size", 320),
+        letterboxed=checkpoint.get("letterbox", False),
     )
     if not len(dataset):
         parser.error("The selected split is empty.")

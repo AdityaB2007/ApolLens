@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "status": "Experimental local detector candidate; not a production repair assistant",
+  "architecture": "SSDLite320 MobileNetV3 Large",
+  "training": "80 fine-tuning epochs from v3 on the expanded set; seed 7; head LR 0.0001, backbone LR 0.00001",
+  "training_images": 51,
+  "validation_images": 11,
+  "development_test_images": 9,
+  "new_public_images": 40,
+  "new_public_boxes": 74,
+  "model_selection": "Highest validation mAP50 among v3, v4 and v5; development test scores are reported separately.",
+  "validation_map50": 0.5553475230166639,
+  "previous_validation_map50": 0.5350553447263209,
+  "development_test_map50": 0.5657317440865235,
+  "previous_development_test_map50": 0.6199400863012698,
+  "test_class_ap50": {
+    "main_battery": 0.8125,
+    "cooling_fan": 0.909375,
+    "ram_module": 0.2857142857142857,
+    "storage_drive": 0.2553376906318083
+  },
+  "test_class_recall_at_confidence_0_5": {
+    "main_battery": 0.5,
+    "cooling_fan": 0.75,
+    "ram_module": 0.0,
+    "storage_drive": 0.3
+  },
+  "iou_threshold": 0.5,
+  "confidence_threshold": 0.5,
+  "runtime": "ONNX Runtime CPU; local files only, no runtime download or inference endpoint",
+  "input_and_class_contract": "components.json; normalized upright XYXY boxes; confidence is not a safety guarantee",
+  "public_sources": "../../data/public_sources.csv",
+  "public_boxes": "../../data/public_boxes.csv; normalized upright XYXY; empty class rows are reviewed negatives",
+  "data_rights": "New public sources retain attribution/license links. Original online-collected seed-photo sources remain unverified.",
+  "limitations": [
+    "Small, approximately annotated development set; holdouts have been inspected repeatedly, not a blind final benchmark.",
+    "Overall development-test score regressed versus v3; storage recall is 3/10 and RAM recall is 0/2 at confidence 0.5.",
+    "Component classes do not identify an exact laptop model or authorize removal; matching manuals are required.",
+    "No Android/iOS device benchmark, native camera integration or repair-safety validation has been performed."
+  ],
+  "tests_passed": 56,
+  "phone_validation": false,
+  "predict": "python vision/src/predict.py --model vision/models/laptop-components/components.onnx --image /path/to/photo.jpg",
+  "preview": "python vision/src/preview.py --model vision/models/laptop-components/components.onnx --image /path/to/photo.jpg --output /tmp/detections.png"
+}

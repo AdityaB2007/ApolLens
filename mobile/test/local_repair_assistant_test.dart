@@ -77,6 +77,31 @@ void main() {
     },
   );
 
+  test(
+    'completed installation continues as verification despite stale intent',
+    () async {
+      runtime.response =
+          '{"intent":"replace","component":"storage",'
+          '"issue":"unknown","evidence":"The new drive is missing",'
+          '"obstacle":"notRecognized"}';
+      final decision = await assistant.reason(
+        ['Storage drive'],
+        'Replace the SSD. The new drive is missing',
+        latestUpdate: 'The new drive is missing',
+        currentAction: 'storage_verify',
+        currentDecision: const RepairDecision(
+          intent: RepairIntent.replace,
+          target: RepairTarget.storage,
+          issue: RepairIssue.unknown,
+          evidence: 'Replace the SSD',
+        ),
+        completedActions: ['storage_insert', 'reassemble'],
+      );
+      expect(decision.intent, RepairIntent.diagnose);
+      expect(decision.obstacle, RepairObstacle.notRecognized);
+    },
+  );
+
   test('initial observations cannot claim an installation obstacle', () async {
     const reply =
         '{"intent":"replace","component":"ram",'

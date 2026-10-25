@@ -85,7 +85,10 @@ final class RepairDecision {
       throw const FormatException('Expected the repair classification schema.');
     }
     T choice<T extends Enum>(String field, List<T> options) {
-      return options.where((entry) => entry.name == value[field]).firstOrNull ??
+      final name = (value[field] as String).trim().toLowerCase();
+      return options
+              .where((entry) => entry.name.toLowerCase() == name)
+              .firstOrNull ??
           (throw FormatException('Unknown $field.'));
     }
 

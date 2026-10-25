@@ -47,6 +47,25 @@ void main() {
     },
   );
 
+  test('normalizes enum casing without accepting new values', () {
+    final raw = jsonEncode({
+      'intent': ' REPLACE ',
+      'component': 'RAM',
+      'issue': 'MEMORYERRORS',
+      'evidence': 'Replace the RAM',
+    });
+    final decision = RepairDecision.decode(raw, 'Replace the RAM');
+    expect(decision.target, RepairTarget.ram);
+    expect(decision.intent, RepairIntent.replace);
+    expect(
+      () => RepairDecision.decode(
+        raw.replaceFirst('RAM"', 'MOTHERBOARD"'),
+        'Replace the RAM',
+      ),
+      throwsFormatException,
+    );
+  });
+
   test('preserves replacement intent without asserting proof of a fault', () {
     final decision = RepairDecision.decode(
       reply(intent: 'replace', evidence: 'I want to replace my SSD'),

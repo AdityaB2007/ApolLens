@@ -422,6 +422,18 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
               ),
             ],
           ],
+          if (_progress != null && _awaitingSymptoms && !_busy)
+            TextButton(
+              onPressed: () {
+                unawaited(widget.speech.stop());
+                setState(() {
+                  _question = null;
+                  _notice = null;
+                  _awaitingSymptoms = false;
+                });
+              },
+              child: const Text('Return to previous guidance'),
+            ),
           if (_progress != null && !_awaitingSymptoms && !_busy)
             RepairPlanPanel(
               progress: _progress!,

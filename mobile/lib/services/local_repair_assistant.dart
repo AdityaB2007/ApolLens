@@ -107,10 +107,10 @@ final class LiteRtLocalModelRuntime implements LocalModelRuntime {
       systemInstruction: systemInstruction,
       enableThinking: false,
       modelType: ModelType.qwen3,
-      maxOutputTokens: 192,
-      temperature: 0.7,
-      topK: 20,
-      topP: 0.8,
+      maxOutputTokens: 256,
+      temperature: 0.1,
+      topK: 1,
+      topP: 1,
     );
     if (_disposed || generation != _generation) {
       await chat.close();
@@ -444,6 +444,12 @@ Return only intent, component, issue, evidence, obstacle as string fields.
             throw const FormatException(
               'Choose an obstacle allowed for the current action.',
             );
+          }
+          // Completed installation cannot restart removal in the same repair.
+          if (completedActions.contains('reassemble') &&
+              currentDecision?.target == decision.target &&
+              decision.issue != RepairIssue.batteryHazard) {
+            return decision.copyWith(intent: RepairIntent.diagnose);
           }
           return decision;
         } on FormatException catch (error) {

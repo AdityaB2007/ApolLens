@@ -93,7 +93,7 @@ void main() {
       Theme.of(tester.element(find.text('ApolLens'))).brightness,
       Brightness.dark,
     );
-    expect(find.text('Select components'), findsOneWidget);
+    expect(find.text('Detected parts'), findsOneWidget);
     expect(find.text('Download assistant'), findsOneWidget);
     expect(find.text('About 1 GB. Works offline after setup.'), findsOneWidget);
 

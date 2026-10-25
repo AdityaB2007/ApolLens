@@ -35,9 +35,8 @@ class LocalAssistantPanel extends StatefulWidget {
 
 class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
   final _symptoms = TextEditingController();
-  final Set<String> _selectedParts = {};
-  List<String>? _reviewParts;
-  CameraFrame? _reviewFrame;
+  final _observed = <String, ({int hits, DateTime lastSeen})>{};
+  CameraFrame? _lastFrame;
   List<InspectionStep> _steps = [];
   List<InspectionStep> _previousChecks = [];
   List<String> _confirmedParts = const [];
@@ -86,50 +85,62 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
   }
 
   List<String> get _parts {
-    final labels = (widget.frames?.result?.detections ?? const <Detection>[])
-        .map((detection) => detection.label)
-        .toSet()
+    final labels = _observed.entries
+        .where((entry) => entry.value.hits >= 2)
+        .map((entry) => entry.key)
         .toList();
     labels.sort((a, b) => componentName(a).compareTo(componentName(b)));
     return labels;
   }
 
+  bool get _looksLikeLaptop {
+    final parts = _confirmedParts.isEmpty ? _parts : _confirmedParts;
+    return parts.contains('main_battery') &&
+        parts.contains('cooling_fan') &&
+        (parts.contains('ram_module') || parts.contains('storage_drive'));
+  }
+
   void _onFrame() {
     if (!mounted || _confirmedParts.isNotEmpty) return;
     final current = widget.frames?.resultFrame;
-    final changed =
-        current != null &&
-        _reviewFrame != null &&
-        (current.sessionId != _reviewFrame!.sessionId ||
-            current.orientation != _reviewFrame!.orientation);
-    if (changed ||
-        widget.frames?.value.status == RecognitionStatus.unavailable) {
-      _reviewParts = null;
-      _reviewFrame = null;
-      _selectedParts.clear();
+    final result = widget.frames?.result;
+    if (widget.frames?.value.status == RecognitionStatus.unavailable ||
+        result?.blocked == true ||
+        (current != null &&
+            _lastFrame != null &&
+            (current.sessionId != _lastFrame!.sessionId ||
+                current.orientation != _lastFrame!.orientation))) {
+      _observed.clear();
+      _lastFrame = null;
     }
-    // Missed detections never move the held list or undo a touch selection.
+    if (current != null &&
+        result?.blocked != true &&
+        current.sequence != _lastFrame?.sequence) {
+      // Two sightings admit a part; brief dropouts do not reshuffle the list.
+      for (final label in result!.detections.map((box) => box.label).toSet()) {
+        final seen = _observed[label];
+        _observed[label] = (
+          hits: (seen?.hits ?? 0) + 1,
+          lastSeen: current.capturedAt,
+        );
+      }
+      _observed.removeWhere(
+        (_, seen) =>
+            current.capturedAt.difference(seen.lastSeen) >
+            const Duration(seconds: 5),
+      );
+      _lastFrame = current;
+    }
     setState(() {});
-  }
-
-  void _review() {
-    final parts = _parts;
-    if (parts.isEmpty || widget.frames?.result?.blocked == true) return;
-    setState(() {
-      _reviewParts = List.unmodifiable(parts);
-      _reviewFrame = widget.frames?.resultFrame;
-      _selectedParts.clear();
-    });
   }
 
   void _resetConversation() {
     _conversation++;
-    _reviewParts = null;
-    _reviewFrame = null;
+    _observed.clear();
+    _lastFrame = null;
     _busy = false;
     _confirmedParts = const [];
     _stepIndex = 0;
-    _selectedParts.clear();
     _steps = [];
     _question = null;
     _notice = null;
@@ -141,40 +152,18 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
     unawaited(widget.speech.stop());
   }
 
-  Future<void> _askAboutParts() async {
-    if (_busy || _selectedParts.isEmpty) return;
-    final conversation = ++_conversation;
-    _confirmedParts = List.unmodifiable(_selectedParts);
+  void _confirmParts() {
+    final parts = _parts;
+    if (_busy || parts.isEmpty) return;
+    _conversation++;
     setState(() {
-      _busy = true;
+      _confirmedParts = List.unmodifiable(parts);
       _notice = null;
       _steps = [];
+      _question = 'What is wrong?';
+      _awaitingSymptoms = true;
     });
-    try {
-      final reply = await widget.assistant.askAbout(
-        _confirmedParts.map(componentName).toList(),
-        _currentGuide,
-        widget.itemId ?? '',
-      );
-      if (!mounted || conversation != _conversation) return;
-      final question = reply.question ?? 'What seems wrong with these parts?';
-      setState(() {
-        _question = question;
-        _awaitingSymptoms = true;
-      });
-      unawaited(widget.speech.speak(question));
-    } catch (_) {
-      if (mounted && conversation == _conversation) {
-        setState(() {
-          _confirmedParts = const [];
-          _notice = 'The local model could not respond. Please retry.';
-        });
-      }
-    } finally {
-      if (mounted && conversation == _conversation) {
-        setState(() => _busy = false);
-      }
-    }
+    unawaited(widget.speech.speak(_question!));
   }
 
   void _cancelReply() {
@@ -300,7 +289,9 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
               ? 'Suggested checks'
               : _confirmedParts.isNotEmpty
               ? 'Troubleshoot'
-              : 'Select components',
+              : _looksLikeLaptop
+              ? 'This appears to be a laptop computer'
+              : 'Detected parts',
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
@@ -332,77 +323,35 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel> {
         if (state.status == LocalAssistantStatus.ready ||
             state.status == LocalAssistantStatus.generating) ...[
           const SizedBox(height: 8),
-          if (_confirmedParts.isNotEmpty) ...[
+          if (_confirmedParts.isNotEmpty || parts.isNotEmpty) ...[
+            const Text('These are the parts I detected'),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final part in _confirmedParts)
+                for (final part
+                    in _confirmedParts.isEmpty ? parts : _confirmedParts)
                   Chip(label: Text(componentName(part))),
               ],
             ),
-            TextButton(
-              onPressed: () => setState(_resetConversation),
-              child: const Text('Scan again'),
-            ),
-          ] else if (widget.frames == null)
-            const Text('Component detection is not available on this device.')
-          else if (_reviewParts == null) ...[
             const SizedBox(height: 8),
+            if (_confirmedParts.isEmpty)
+              FilledButton(
+                onPressed: _confirmParts,
+                child: const Text('That looks right'),
+              )
+            else
+              TextButton(
+                onPressed: () => setState(_resetConversation),
+                child: const Text('Scan again'),
+              ),
+          ] else
             Text(
-              parts.isEmpty
-                  ? 'Bring the components into view.'
-                  : parts.map(componentName).join(' · '),
+              widget.frames == null
+                  ? 'Component detection is unavailable.'
+                  : 'Bring the components into view.',
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: parts.isEmpty ? null : _review,
-                icon: const Icon(Icons.checklist_rounded, size: 20),
-                label: const Text('Review parts'),
-              ),
-            ),
-          ] else ...[
-            const SizedBox(height: 8),
-            const Text('List paused. Choose what needs attention.'),
-            const SizedBox(height: 8),
-            for (final part in _reviewParts!)
-              CheckboxListTile(
-                key: ValueKey(part),
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                value: _selectedParts.contains(part),
-                title: Text(componentName(part)),
-                onChanged: _busy
-                    ? null
-                    : (selected) => setState(() {
-                        if (selected == true) {
-                          _selectedParts.add(part);
-                        } else {
-                          _selectedParts.remove(part);
-                        }
-                      }),
-              ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: _busy ? null : () => setState(_resetConversation),
-                  child: const Text('Scan again'),
-                ),
-                FilledButton(
-                  onPressed: _busy || _selectedParts.isEmpty
-                      ? null
-                      : _askAboutParts,
-                  child: const Text('Continue'),
-                ),
-              ],
-            ),
-          ],
           if (_question != null) ...[
             const SizedBox(height: 12),
             Semantics(liveRegion: true, child: Text(_question!)),

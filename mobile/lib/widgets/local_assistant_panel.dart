@@ -458,6 +458,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
           if (_progress != null && !_awaitingSymptoms && !_busy)
             RepairPlanPanel(
               progress: _progress!,
+              frames: widget.frames,
               speech: widget.speech,
               onTellMore: _tellMore,
             ),

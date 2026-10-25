@@ -1,5 +1,6 @@
 // Gavin - Touch-confirmed repair progress stays separate from camera observations.
 import 'repair_decision.dart';
+import 'fastener_map.dart';
 
 enum RepairFact {
   dataPlanReady,
@@ -40,6 +41,8 @@ final class RepairCard {
 final class RepairProgress {
   RepairProgress(this.decision);
   RepairDecision decision;
+  FastenerMap? fasteners;
+  final fastenerPositions = <String, int>{};
   final _facts = <RepairFact>{};
   final _completed = <String>{};
   Set<RepairFact> get facts => Set.unmodifiable(_facts);

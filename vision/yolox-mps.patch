@@ -1,0 +1,26 @@
+diff --git a/yolox/models/losses.py b/yolox/models/losses.py
+index 77b4d8e..1761eec 100644
+--- a/yolox/models/losses.py
++++ b/yolox/models/losses.py
+@@ -30 +30 @@ class IOUloss(nn.Module):
+-        en = (tl < br).type(tl.type()).prod(dim=1)
++        en = (tl < br).to(tl).prod(dim=1)
+diff --git a/yolox/models/yolo_head.py b/yolox/models/yolo_head.py
+index 3e51768..50d57a4 100644
+--- a/yolox/models/yolo_head.py
++++ b/yolox/models/yolo_head.py
+@@ -223 +223 @@ class YOLOXHead(nn.Module):
+-            grid = torch.stack((xv, yv), 2).view(1, 1, hsize, wsize, 2).type(dtype)
++            grid = torch.stack((xv, yv), 2).view(1, 1, hsize, wsize, 2).to(device=output.device, dtype=output.dtype)
+@@ -245,2 +245,2 @@ class YOLOXHead(nn.Module):
+-        grids = torch.cat(grids, dim=1).type(dtype)
+-        strides = torch.cat(strides, dim=1).type(dtype)
++        grids = torch.cat(grids, dim=1).to(device=outputs.device, dtype=outputs.dtype)
++        strides = torch.cat(strides, dim=1).to(device=outputs.device, dtype=outputs.dtype)
+diff --git a/yolox/utils/boxes.py b/yolox/utils/boxes.py
+index f71e8d9..5370723 100644
+--- a/yolox/utils/boxes.py
++++ b/yolox/utils/boxes.py
+@@ -100 +100 @@ def bboxes_iou(bboxes_a, bboxes_b, xyxy=True):
+-    en = (tl < br).type(tl.type()).prod(dim=2)
++    en = (tl < br).to(tl).prod(dim=2)

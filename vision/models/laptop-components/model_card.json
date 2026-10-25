@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "status": "Experimental v13; RAM improved, storage reliability gate not met",
+  "architecture": "YOLOX Nano, 640-pixel RGB letterbox",
+  "model_sha256": "27107173e41e7767059e3e8a5cbd0ff649eef886538932f72697d472d49bfbc9",
+  "training_checkpoint": "training.pt",
+  "upstream_source": "https://github.com/Megvii-BaseDetection/YOLOX",
+  "upstream_revision": "6ddff4824372906469a7fae2dc3206c7aa4bbaee",
+  "upstream_license": "../../YOLOX_LICENSE.txt",
+  "attribution": "../../YOLOX_NOTICE.txt",
+  "training_stages": [
+    "v9: COCO initialization; 145 training images; epoch20 selected from120.",
+    "v11: installed-module additions; 168 training images; epoch20 selected from60.",
+    "v13: reviewed RAM/storage and lookalikes; 207 training images; epoch20 selected from30."
+  ],
+  "final_stage_seed": 19,
+  "final_stage_head_lr": 0.0001,
+  "final_stage_backbone_lr": 1e-05,
+  "frozen_batchnorm": true,
+  "ema": true,
+  "data_images": 307,
+  "training_images": 207,
+  "calibration_images": 28,
+  "fresh_holdout_images": 72,
+  "fresh_holdout_groups": 29,
+  "fresh_holdout_negatives": 26,
+  "selection": "Maximum mean RAM/storage AP50 on calibration only; checkpoint, preprocessing and thresholds locked before fresh holdout inference.",
+  "calibration_ram_ap50": 0.801953601953602,
+  "calibration_storage_ap50": 0.7787408404087238,
+  "default_confidence": 0.5,
+  "iou_threshold": 0.5,
+  "fresh_holdout_classes_at_default_confidence": {
+    "main_battery": {
+      "ground_truth": 4,
+      "ap50": 0.75,
+      "true_positive": 3,
+      "false_positive": 1,
+      "false_negative": 1,
+      "precision": 0.75,
+      "recall": 0.75
+    },
+    "cooling_fan": {
+      "ground_truth": 2,
+      "ap50": 1.0,
+      "true_positive": 2,
+      "false_positive": 0,
+      "false_negative": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "ram_module": {
+      "ground_truth": 30,
+      "ap50": 0.9558746404476156,
+      "true_positive": 27,
+      "false_positive": 2,
+      "false_negative": 3,
+      "precision": 0.9310344827586207,
+      "recall": 0.9
+    },
+    "storage_drive": {
+      "ground_truth": 24,
+      "ap50": 0.513692855347267,
+      "true_positive": 10,
+      "false_positive": 6,
+      "false_negative": 14,
+      "precision": 0.625,
+      "recall": 0.4166666666666667
+    }
+  },
+  "calibrated_ram_threshold": 0.75,
+  "calibrated_ram_precision": 0.96,
+  "calibrated_ram_recall": 0.8,
+  "calibrated_storage_threshold": 0.45,
+  "calibrated_storage_precision": 0.5882352941176471,
+  "calibrated_storage_recall": 0.4166666666666667,
+  "reliability_gate_precision_and_recall_90": false,
+  "previous_v5_same_holdout_ram_true_false_positive": [
+    15,
+    27
+  ],
+  "previous_v5_same_holdout_storage_true_false_positive": [
+    9,
+    39
+  ],
+  "runtime": "Local ONNX Runtime CPU; no download or inference endpoint",
+  "cpu_mean_total_detect_ms": 32.56126334761373,
+  "cpu_timing_scope": "This Mac, 72 still images including decode; not a phone latency result",
+  "verification": "92 software tests; ONNX checker; seeded and four real-image PyTorch/ONNX parity; inference with OS network denied",
+  "data_sources": [
+    "../../data/public_sources.csv",
+    "../../data/reliability_sources.csv",
+    "../../data/installed_sources.csv",
+    "../../data/mendeley_sources.csv"
+  ],
+  "data_rights": "New public-image licenses/attribution recorded. Original online-collected seed-photo sources remain unverified.",
+  "limitations": [
+    "Storage combines SSD/HDD; this does not validate SSD subtype discrimination.",
+    "Approximate Codex annotations and foreground-assisted boxes; not independently reviewed ground truth.",
+    "RAM improves on this small public still-image set; storage misses 14 of24 drives at default confidence.",
+    "No Android/iOS native inference, real camera footage, exact-laptop identification or repair-safety validation.",
+    "Component labels do not authorize removal. A matching model-specific manual and user confirmation are required.",
+    "Further tuning informed by holdout failures makes this set development data."
+  ],
+  "phone_validation": false,
+  "predict": "python vision/src/predict.py --model vision/models/laptop-components/components.onnx --image /path/to/photo.jpg",
+  "preview": "python vision/src/preview.py --model vision/models/laptop-components/components.onnx --image /path/to/photo.jpg --output /tmp/detections.png"
+}

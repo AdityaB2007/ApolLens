@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "architecture": "yolox_nano",
+  "sha256": "27107173e41e7767059e3e8a5cbd0ff649eef886538932f72697d472d49bfbc9",
+  "classes": [
+    "__background__",
+    "main_battery",
+    "cooling_fan",
+    "ram_module",
+    "storage_drive"
+  ],
+  "input": {
+    "name": "images",
+    "dtype": "float32",
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "color": "RGB",
+    "range": [
+      0,
+      1
+    ],
+    "resize": "letterbox",
+    "padding": 114
+  },
+  "outputs": {
+    "boxes": "letterbox_normalized_xyxy",
+    "scores": "float32",
+    "labels": "int64 indices into classes"
+  },
+  "threshold": 0.5,
+  "max_results": 20,
+  "parity": "ONNX checker and CPU outputs matched PyTorch on seeded input",
+  "scope": "Local prototype; not validated on physical Android/iOS devices."
+}

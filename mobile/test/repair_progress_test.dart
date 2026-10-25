@@ -1,5 +1,6 @@
 import 'package:apollens/models/repair_decision.dart';
 import 'package:apollens/models/repair_progress.dart';
+import 'package:apollens/services/storage_repair_guide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -14,6 +15,54 @@ void main() {
       ),
     ),
   );
+  test('M.2 replacement progresses without repeating diagnosis', () {
+    for (var i = 0; i < 3; i++) {
+      final card = storageReplacementCard(progress);
+      confirmStorageCard(progress, card);
+    }
+    expect(progress.has(RepairFact.powerIsolated), isTrue);
+    confirmStorageCard(
+      progress,
+      storageReplacementCard(progress),
+      choice: RepairFact.m2Drive,
+    );
+    expect(storageReplacementCard(progress).id, 'storage_retainer');
+    confirmStorageCard(
+      progress,
+      storageReplacementCard(progress),
+      choice: RepairFact.screwRetainer,
+    );
+    final actions = <String>[];
+    for (var i = 0; i < 10 && !storageReplacementCard(progress).terminal; i++) {
+      final card = storageReplacementCard(progress);
+      actions.add(card.id);
+      confirmStorageCard(progress, card);
+    }
+    expect(actions, [
+      'storage_compatibility',
+      'storage_release',
+      'storage_remove',
+      'storage_insert',
+      'storage_secure',
+      'reassemble',
+      'storage_verify',
+    ]);
+    expect(storageReplacementCard(progress).id, 'storage_finish');
+  });
+
+  test('stale or fabricated cards cannot skip power isolation', () {
+    final stale = storageReplacementCard(progress);
+    confirmStorageCard(progress, stale);
+    expect(confirmStorageCard(progress, stale), isFalse);
+    const fake = RepairCard(
+      id: 'isolate_power',
+      title: 'Skip power',
+      detail: 'Invented',
+    );
+    expect(confirmStorageCard(progress, fake), isFalse);
+    expect(progress.has(RepairFact.powerIsolated), isFalse);
+  });
+
   test('manual actions are recorded once with stable IDs', () {
     const card = RepairCard(
       id: 'isolate',

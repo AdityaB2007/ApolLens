@@ -1,5 +1,6 @@
 // Gavin - Camera viewport for ApolLens repair instructions.
 import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import '../models/camera_frame.dart';
 import '../widgets/detection_overlay.dart';
@@ -203,7 +204,24 @@ class _CameraScreenState extends State<CameraScreen>
     return camera?.value.isInitialized == true
         ? Column(
             children: [
-              Expanded(child: _preview(camera!)),
+              Expanded(
+                child: ValueListenableBuilder<CameraValue>(
+                  valueListenable: camera!,
+                  builder: (context, value, _) {
+                    final landscape =
+                        value.deviceOrientation ==
+                            DeviceOrientation.landscapeLeft ||
+                        value.deviceOrientation ==
+                            DeviceOrientation.landscapeRight;
+                    return CameraViewport(
+                      aspectRatio: landscape
+                          ? value.aspectRatio
+                          : 1 / value.aspectRatio,
+                      child: _preview(camera),
+                    );
+                  },
+                ),
+              ),
               if (_streamError != null) ...[
                 Text(_streamError!, textAlign: TextAlign.center),
                 TextButton(
@@ -228,4 +246,31 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           );
   }
+}
+
+// Scale the image and its overlay together, then crop them to the same viewport.
+class CameraViewport extends StatelessWidget {
+  const CameraViewport({
+    super.key,
+    required this.aspectRatio,
+    required this.child,
+  });
+  final double aspectRatio;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => ClipRect(
+      child: SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: constraints.maxWidth / aspectRatio,
+            child: child,
+          ),
+        ),
+      ),
+    ),
+  );
 }

@@ -38,6 +38,9 @@ void main() {
   testWidgets('wires the local assistant into the camera-first app', (
     tester,
   ) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     final assistant = LocalRepairAssistant(runtime: _TestModelRuntime());
     final speech = OfflineSpeechService();
     await tester.pumpWidget(
@@ -45,15 +48,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Point your camera at the item'), findsOneWidget);
-    expect(find.text('Local repair assistant'), findsOneWidget);
-    expect(find.text('Install local model'), findsOneWidget);
-    expect(
-      find.text(
-        'One-time online install: about 329 MB. Inference is on-device afterward.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Mission support'), findsOneWidget);
+    expect(find.text('Select components'), findsOneWidget);
+    expect(find.text('Download assistant'), findsOneWidget);
+    expect(find.text('About 1 GB. Works offline after setup.'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
@@ -74,7 +72,7 @@ final class _TestModelRuntime implements LocalModelRuntime {
 
   @override
   Future<String> generate(String systemInstruction, String prompt) async =>
-      '{"question":"","step_ids":[]}';
+      '{"question":"","steps":[]}';
 
   @override
   Future<void> cancelGeneration() async {}

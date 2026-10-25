@@ -1,3 +1,7 @@
 .dart_tool/
 build/
 .flutter-plugins-dependencies
+
+# Local IDE metadata.
+.idea/
+*.iml

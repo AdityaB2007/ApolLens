@@ -20,7 +20,7 @@ class DetectionOverlay extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     label: boxes.isEmpty
         ? null
-        : 'Components: ${boxes.map((box) => box.label).join(', ')}',
+        : 'Components: ${boxes.map((box) => componentName(box.label)).join(', ')}',
     child: CustomPaint(
       foregroundPainter: _DetectionPainter(boxes, frame, geometry),
       child: child,
@@ -40,36 +40,46 @@ class _DetectionPainter extends CustomPainter {
     final transform = geometry;
     if (source == null || transform == null) return;
     final paint = Paint()
-      ..color = const Color(0xFFB3452E)
+      ..color = const Color(0xFFF4C77D)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = 1.5;
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     for (final detection in detections) {
       final box = transform.mapBox(detection.bounds, source, size);
       if (box == null) continue;
-      canvas.drawRect(box, paint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(box, const Radius.circular(4)),
+        paint,
+      );
       final label = TextPainter(
         maxLines: 1,
         ellipsis: '…',
         textDirection: TextDirection.ltr,
         text: TextSpan(
-          text: detection.label,
+          text: componentName(detection.label),
           style: const TextStyle(
-            fontSize: 14,
-            fontFamily: 'Roboto',
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
             color: Colors.white,
-            backgroundColor: Color(0xFFB3452E),
           ),
         ),
-      )..layout(maxWidth: size.width);
-      label.paint(
-        canvas,
-        Offset(
-          box.left.clamp(0, size.width - label.width),
-          box.top.clamp(0, (size.height - label.height).clamp(0, size.height)),
+      )..layout(maxWidth: (size.width - 16).clamp(1, size.width));
+      final origin = Offset(
+        box.left.clamp(0, (size.width - label.width - 12).clamp(0, size.width)),
+        (box.top - label.height - 8).clamp(
+          0,
+          (size.height - label.height - 8).clamp(0, size.height),
         ),
       );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          origin & Size(label.width + 12, label.height + 6),
+          const Radius.circular(4),
+        ),
+        Paint()..color = const Color(0xE6202923),
+      );
+      label.paint(canvas, origin + const Offset(6, 3));
     }
     canvas.restore();
   }

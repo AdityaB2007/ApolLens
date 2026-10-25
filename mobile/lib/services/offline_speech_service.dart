@@ -86,8 +86,9 @@ final class OfflineSpeechService extends ChangeNotifier {
   }
 
   Future<void> speak(String text) async {
-    if (_disposed || _muted || text.trim().isEmpty) return;
+    if (_disposed || text.trim().isEmpty) return;
     _lastText = text;
+    if (_muted) return;
     final generation = ++_generation;
     // Interrupt old speech before queueing the new displayed instruction.
     try {

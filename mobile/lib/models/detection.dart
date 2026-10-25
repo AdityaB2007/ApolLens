@@ -21,3 +21,12 @@ final class Detection {
   // Normalized upright-image coordinates, before preview scaling or cropping.
   final Rect bounds;
 }
+
+// Keep model labels internal; use familiar names on screen and in speech.
+String componentName(String label) => switch (label) {
+  'ram_module' => 'RAM',
+  'storage_drive' => 'Storage drive',
+  'main_battery' => 'Battery',
+  'cooling_fan' => 'Cooling fan',
+  _ => label.replaceAll('_', ' '),
+};

@@ -168,8 +168,70 @@ class _ApolLensAppState extends State<ApolLensApp> with WidgetsBindingObserver {
     debugShowCheckedModeBanner: false,
     title: 'ApolLens',
     theme: ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB3452E)),
-      scaffoldBackgroundColor: const Color(0xFFF4F3EF),
+      colorScheme: const ColorScheme.light(
+        primary: Color(0xFFB54220),
+        secondary: Color(0xFFB54220),
+        onSecondary: Colors.white,
+        onPrimary: Colors.white,
+        surface: Colors.white,
+        onSurface: Color(0xFF202923),
+        onSurfaceVariant: Color(0xFF626A64),
+        surfaceContainerHighest: Color(0xFFF1F2ED),
+        outline: Color(0xFFABB2AC),
+        outlineVariant: Color(0xFFE0E3DC),
+      ),
+      scaffoldBackgroundColor: const Color(0xFF0A101B),
+      dividerColor: const Color(0xFFE0E3DC),
+      textTheme: const TextTheme(
+        headlineMedium: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.w600,
+          height: 1.15,
+          letterSpacing: -0.8,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.3,
+        ),
+        bodyLarge: TextStyle(fontSize: 16, height: 1.5, letterSpacing: 0),
+        bodyMedium: TextStyle(fontSize: 14, height: 1.5, letterSpacing: 0),
+        labelLarge: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF0A101B),
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        centerTitle: false,
+        elevation: 0,
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF6F7F2),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     ),
     home: HomeScreen(
       speech: _speech,

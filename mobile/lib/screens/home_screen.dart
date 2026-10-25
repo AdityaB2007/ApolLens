@@ -12,6 +12,7 @@ import '../services/procedure_service.dart';
 import '../services/session_service.dart';
 import '../services/speech_controller.dart';
 import '../widgets/local_assistant_panel.dart';
+import '../widgets/galaxy_background.dart';
 import '../widgets/session_guide.dart';
 import 'camera_screen.dart';
 
@@ -78,86 +79,111 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('ApolLens')),
-    body: SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Point your camera at the item',
-            style: Theme.of(context).textTheme.headlineSmall,
+    appBar: AppBar(
+      title: const Text('ApolLens'),
+      actions: const [
+        Padding(
+          padding: EdgeInsets.only(right: 20),
+          child: Row(
+            children: [
+              Icon(Icons.phonelink_lock_outlined, size: 16),
+              SizedBox(width: 6),
+              Text('On device', style: TextStyle(fontSize: 12)),
+            ],
           ),
-          const SizedBox(height: 16),
-          Card(
-            child: SizedBox(
-              height: 320,
-              child: Center(child: CameraScreen(frames: widget.frames)),
+        ),
+      ],
+    ),
+    body: Stack(
+      fit: StackFit.expand,
+      children: [
+        const GalaxyBackground(),
+        SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mission support',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Offline guidance · Laptop demo',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFFBDC8D4),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Column(
+                    children: [
+                      AspectRatio(
+                        aspectRatio: 1,
+                        child: ColoredBox(
+                          color: const Color(0xFF18211E),
+                          child: CameraScreen(frames: widget.frames),
+                        ),
+                      ),
+                      Container(
+                        width: double.infinity,
+                        color: const Color(0xFF18211E),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: widget.recognition == null
+                            ? _status(RecognitionState.unavailable)
+                            : ValueListenableBuilder<RecognitionState>(
+                                valueListenable: widget.recognition!,
+                                builder: (context, state, _) => _status(state),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _guidance(),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          if (widget.recognition == null)
-            _status(RecognitionState.unavailable)
-          else
-            ValueListenableBuilder<RecognitionState>(
-              valueListenable: widget.recognition!,
-              builder: (context, state, _) => _status(state),
-            ),
-          const SizedBox(height: 8),
-          _guidance(),
-        ],
-      ),
+        ),
+      ],
     ),
   );
 
   Widget _guidance() {
     final procedures = widget.procedures;
-    if (procedures == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Repair guide lookup is unavailable.'),
-          _localAssistant(),
-        ],
-      );
-    }
+    if (procedures == null) return _localAssistant();
     return ValueListenableBuilder<ProcedureState>(
       valueListenable: procedures,
-      builder: (context, state, _) {
-        final currentItem = widget.recognition?.value.itemId;
-        final guide = state.itemId != currentItem
-            ? const Text('Waiting for a matching repair guide.')
-            : switch (state.status) {
-                ProcedureStatus.ready => SessionGuide(
-                  procedure: state.procedure!,
-                  itemId: state.itemId!,
-                  sessions: widget.sessions,
-                  speech: widget.speech,
-                ),
-                ProcedureStatus.loading => const Text('Loading repair guide…'),
-                ProcedureStatus.unsupported => const Text(
-                  'No matching repair guide is available.',
-                ),
-                ProcedureStatus.failed => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Repair guide could not be loaded.'),
-                    TextButton(
-                      onPressed: () =>
-                          procedures.load(state.itemId, retry: true),
-                      child: const Text('Retry guide'),
-                    ),
-                  ],
-                ),
-                ProcedureStatus.unavailable => const Text(
-                  'Repair guidance is unavailable.',
-                ),
-              };
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [guide, _localAssistant()],
-        );
-      },
+      builder: (context, state, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (state.status == ProcedureStatus.ready &&
+              state.itemId == widget.recognition?.value.itemId)
+            SessionGuide(
+              procedure: state.procedure!,
+              itemId: state.itemId!,
+              sessions: widget.sessions,
+              speech: widget.speech,
+            ),
+          if (state.status == ProcedureStatus.loading)
+            const Text('Finding the repair guide…'),
+          if (state.status == ProcedureStatus.failed)
+            TextButton(
+              onPressed: () => procedures.load(state.itemId, retry: true),
+              child: const Text('Retry repair guide'),
+            ),
+          _localAssistant(),
+        ],
+      ),
     );
   }
 
@@ -165,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final assistant = widget.localAssistant;
     final speech = widget.offlineSpeech;
     if (assistant == null || speech == null) {
-      return const Text('On-device assistant is unavailable.');
+      return const Text('The assistant is not available on this device.');
     }
     return LocalAssistantPanel(
       key: ValueKey(_itemId),
@@ -179,38 +205,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _status(RecognitionState state) {
     final result = widget.frames?.result;
-    final notice = result?.blocked == true
-        ? 'View is blocked. Clear the camera and try another angle.'
-        : (widget.frames != null &&
-                  result == null &&
-                  state.status == RecognitionStatus.identified
-              ? 'Last recognized: ${state.label}'
-              : null);
-    final placementMissing =
-        result != null &&
-        result.detections.isNotEmpty &&
-        result.geometry == null;
-    return Semantics(
-      liveRegion: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            notice ??
-                switch (state.status) {
-                  RecognitionStatus.unavailable =>
-                    'Item recognition unavailable',
-                  RecognitionStatus.identifying => 'Identifying item…',
-                  RecognitionStatus.unknown =>
-                    result?.detections.isNotEmpty == true
-                        ? 'Components detected. Confirm them below.'
-                        : 'No components detected. Try another angle.',
-                  RecognitionStatus.identified => 'Detected: ${state.label}',
-                },
-          ),
-          if (placementMissing) const Text('Component positions unavailable.'),
-        ],
-      ),
+    final text = result?.blocked == true
+        ? 'Clear the camera’s view'
+        : switch (state.status) {
+            RecognitionStatus.unavailable =>
+              'Camera view · Detection unavailable',
+            RecognitionStatus.identifying => 'Looking for components…',
+            RecognitionStatus.unknown =>
+              result?.detections.isNotEmpty == true
+                  ? 'Components in view · Review below'
+                  : 'Point at the equipment',
+            RecognitionStatus.identified => state.label ?? 'Device in view',
+          };
+    return Text(
+      text,
+      style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
     );
   }
 }

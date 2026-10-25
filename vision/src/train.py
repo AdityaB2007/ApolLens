@@ -5,6 +5,7 @@ import random
 from pathlib import Path
 
 import torch
+from augment import focus_crop
 from PIL import Image, ImageEnhance, ImageOps
 from torch.utils.data import DataLoader, Dataset
 from torchvision.models.detection import ssdlite320_mobilenet_v3_large
@@ -25,12 +26,15 @@ def build_model(classes, pretrained=False):
 
 
 class ComponentDataset(Dataset):
-    def __init__(self, labels, images, provenance, split, augment=False):
+    def __init__(
+        self, labels, images, provenance, split, augment=False, focus_crops=False
+    ):
         self.root = Path(images)
         self.classes = ["__background__"] + [c["name"] for c in labels["categories"]]
         class_ids = {c["id"]: i + 1 for i, c in enumerate(labels["categories"])}
         self.items = []
         self.augment = augment
+        self.focus_crops = focus_crops
         for image in labels["images"]:
             if provenance[image["file_name"]]["split"] != split:
                 continue
@@ -61,6 +65,9 @@ class ComponentDataset(Dataset):
                 .resize((320, 320), Image.Resampling.BILINEAR)
             )
         boxes = torch.tensor(coordinates, dtype=torch.float32).reshape(-1, 4)
+        classes = torch.tensor(classes, dtype=torch.int64)
+        if self.augment and self.focus_crops and random.random() < 0.65:
+            image, boxes, classes = focus_crop(image, boxes, classes)
         if self.augment:
             image = ImageEnhance.Brightness(image).enhance(random.uniform(0.8, 1.2))
             if random.random() < 0.5:
@@ -71,7 +78,7 @@ class ComponentDataset(Dataset):
                 boxes[:, [1, 3]] = 1 - boxes[:, [3, 1]]
         return pil_to_tensor(image).float() / 255, {
             "boxes": boxes * 320,
-            "labels": torch.tensor(classes, dtype=torch.int64),
+            "labels": classes,
             "image_id": torch.tensor(record["id"]),
         }
 
@@ -92,6 +99,7 @@ def main():
         help="Download official COCO initialization during training.",
     )
     parser.add_argument("--fine-tune", action="store_true")
+    parser.add_argument("--focus-crops", action="store_true")
     args = parser.parse_args()
     if args.epochs < 1 or args.output.exists():
         parser.error("Use positive epochs and a new output directory.")
@@ -101,7 +109,14 @@ def main():
     torch.set_num_threads(4)
     labels = json.loads(args.labels.read_text())
     provenance = json.loads(args.provenance.read_text())
-    dataset = ComponentDataset(labels, args.images, provenance, "train", augment=True)
+    dataset = ComponentDataset(
+        labels,
+        args.images,
+        provenance,
+        "train",
+        augment=True,
+        focus_crops=args.focus_crops,
+    )
     if len(dataset) < 2:
         parser.error("At least two reviewed training images are required.")
     loader = DataLoader(
@@ -149,6 +164,7 @@ def main():
             "seed": args.seed,
             "epochs": args.epochs,
             "fine_tune": args.fine_tune,
+            "focus_crops": args.focus_crops,
         },
         args.output / "detector.pt",
     )

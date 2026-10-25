@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:apollens/models/inspection_step.dart';
 import 'package:apollens/models/repair_decision.dart';
+import 'package:apollens/models/repair_progress.dart';
 import 'package:apollens/models/repair_procedure.dart';
 import 'package:apollens/services/local_repair_assistant.dart';
 import 'package:apollens/services/offline_speech_service.dart';
@@ -62,12 +63,14 @@ void main() {
         'Replace the SSD. The new drive is still missing',
         latestUpdate: 'The new drive is still missing',
         currentDecision: previous,
+        confirmedFacts: {RepairFact.m2Drive, RepairFact.powerIsolated},
         currentAction: 'storage_verify',
         completedActions: ['storage_remove', 'storage_insert', 'reassemble'],
       );
       final context = jsonDecode(runtime.lastPrompt!) as Map;
       expect(context['latest_update'], 'The new drive is still missing');
       expect(context['current_goal'], 'replace');
+      expect(context['confirmed_observations'], ['m2Drive', 'powerIsolated']);
       expect(context['current_component'], 'storage');
       expect(context['current_action'], 'storage_verify');
       expect(context['completed_actions'], contains('reassemble'));

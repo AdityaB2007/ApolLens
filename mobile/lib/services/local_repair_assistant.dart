@@ -9,6 +9,7 @@ import 'package:flutter_edge_ai_litertlm/flutter_edge_ai_litertlm.dart';
 import '../models/repair_procedure.dart';
 import '../models/inspection_step.dart';
 import '../models/repair_decision.dart';
+import '../models/repair_progress.dart';
 import 'apple_local_model_runtime.dart';
 import 'local_model_runtime.dart';
 export 'local_model_runtime.dart';
@@ -323,7 +324,8 @@ verification, diagnose a remaining problem rather than replacing the same part a
 repair_phase verification_after_installation means installation is already done:
 default to diagnose. A newly installed part still absent is obstacle notRecognized.
 Only a NEW explicit replacement request in latest_update can restart replacement.
-Use completed_actions; never restart completed checks.
+Use completed_actions and confirmed_observations; never restart completed checks.
+Confirmed observations are reports from the person, not automatic vision verification.
 bootMissing: no boot device, or drive absent/unknown in firmware.
 bootConfiguration: ONLY a drive explicitly present in firmware with missing
 boot manager, boot files or a stated boot configuration problem.
@@ -345,6 +347,7 @@ Return only intent, component, issue, evidence, obstacle as string fields.
     List<String> completedActions = const [],
     String? latestUpdate,
     RepairDecision? currentDecision,
+    Set<RepairFact> confirmedFacts = const {},
     String? currentAction,
   }) async {
     final problem = reportedProblem.trim();
@@ -394,6 +397,9 @@ Return only intent, component, issue, evidence, obstacle as string fields.
       },
       'current_action': ?currentAction,
       'completed_actions': completedActions,
+      'confirmed_observations': confirmedFacts
+          .map((fact) => fact.name)
+          .toList(),
     };
     final shape = jsonEncode(choices);
     _setState(const LocalAssistantState(LocalAssistantStatus.generating));

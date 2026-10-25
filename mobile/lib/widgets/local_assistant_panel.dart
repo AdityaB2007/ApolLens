@@ -48,7 +48,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
   int _conversation = 0;
   String? _question, _questionAction;
   String? _notice;
-  String _reportedProblem = '';
+  final _observations = <String>[];
   String? _guideKey;
   bool _awaitingSymptoms = false;
   bool _busy = false;
@@ -163,7 +163,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
     _questionAction = null;
     _question = null;
     _notice = null;
-    _reportedProblem = '';
+    _observations.clear();
     _publishFocus();
     _awaitingSymptoms = false;
     _symptoms.clear();
@@ -202,14 +202,11 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
     final conversation = _conversation;
     final response = _symptoms.text.trim();
     if (response.isEmpty) return;
-    final combined = [
-      _reportedProblem,
-      response,
-    ].where((part) => part.isNotEmpty).join('\n');
-    if (combined.length > 6000) {
-      setState(() => _notice = 'This conversation is full. Start a new scan.');
-      return;
+    final history = [..._observations, response];
+    while (history.join('\n').length > 6000 && history.length > 2) {
+      history.removeAt(1);
     }
+    final combined = history.join('\n');
     final previous = _progress;
     unawaited(widget.speech.stop());
     setState(() {
@@ -222,12 +219,15 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
         combined,
         completedActions: previous?.completedActions ?? const [],
         latestUpdate: response,
+        confirmedFacts: previous?.facts ?? const {},
         currentDecision: previous?.decision,
         currentAction: _questionAction,
       );
       if (!mounted || conversation != _conversation) return;
       setState(() {
-        _reportedProblem = combined;
+        _observations
+          ..clear()
+          ..addAll(history);
         if (previous == null || previous.decision.target != decision.target) {
           _progress = RepairProgress(decision);
         } else {
@@ -255,7 +255,6 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
     _questionAction = _progress == null
         ? null
         : nextLaptopRepairCard(_progress!).id;
-    _progress?.requireReadinessReview();
     setState(() {
       _question = 'What changed, or where are you stuck?';
       _awaitingSymptoms = true;
@@ -265,8 +264,9 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed || !_busy) return;
-    _cancelReply();
+    if (state == AppLifecycleState.resumed) return;
+    _progress?.requireReadinessReview();
+    if (_busy) _cancelReply();
   }
 
   Future<void> _install() async {
@@ -344,29 +344,37 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
         if (state.status == LocalAssistantStatus.ready ||
             state.status == LocalAssistantStatus.generating) ...[
           const SizedBox(height: 8),
-          if (_confirmedParts.isNotEmpty || parts.isNotEmpty) ...[
+          if (_confirmedParts.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  _confirmedParts.map(componentName).join(' · '),
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                TextButton(
+                  onPressed: () => setState(_resetConversation),
+                  child: const Text('Scan again'),
+                ),
+              ],
+            )
+          else if (parts.isNotEmpty) ...[
             const Text('These are the parts I detected'),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final part
-                    in _confirmedParts.isEmpty ? parts : _confirmedParts)
+                for (final part in parts)
                   Chip(label: Text(componentName(part))),
               ],
             ),
             const SizedBox(height: 8),
-            if (_confirmedParts.isEmpty)
-              FilledButton(
-                onPressed: _confirmParts,
-                child: const Text('That looks right'),
-              )
-            else
-              TextButton(
-                onPressed: () => setState(_resetConversation),
-                child: const Text('Scan again'),
-              ),
+            FilledButton(
+              onPressed: _confirmParts,
+              child: const Text('That looks right'),
+            ),
           ] else
             Text(
               widget.frames == null
@@ -394,20 +402,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
                 alignment: Alignment.centerLeft,
                 child: FilledButton(
                   onPressed: _busy ? null : _sendSymptoms,
-                  child: _busy
-                      ? const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                            SizedBox(width: 10),
-                            Text('Thinking…'),
-                          ],
-                        )
-                      : const Text('Find next steps'),
+                  child: Text(_busy ? 'Thinking…' : 'Find next steps'),
                 ),
               ),
             ],

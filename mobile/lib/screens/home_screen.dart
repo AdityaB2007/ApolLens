@@ -41,7 +41,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String? _itemId;
+  String? _itemId, _focusedPart;
 
   @override
   void initState() {
@@ -64,7 +64,10 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_itemId != itemId) {
       unawaited(widget.speech?.stop(clear: true));
       widget.sessions?.reset();
-      setState(() => _itemId = itemId);
+      setState(() {
+        _itemId = itemId;
+        _focusedPart = null;
+      });
     }
     unawaited(widget.procedures?.load(itemId));
   }
@@ -80,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('ApolLens'),
+      title: Text('ApolLens', style: Theme.of(context).textTheme.titleLarge),
       actions: const [
         Padding(
           padding: EdgeInsets.only(right: 20),
@@ -100,26 +103,50 @@ class _HomeScreenState extends State<HomeScreen> {
         const GalaxyBackground(),
         SafeArea(
           top: false,
-          child: SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: ColoredBox(
-                      color: const Color(0xFF050815),
-                      child: CameraScreen(frames: widget.frames),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final camera = ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: CameraScreen(
+                  frames: widget.frames,
+                  focusedLabel: _focusedPart,
+                ),
+              );
+              final guidance = SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                child: _guidance(),
+              );
+              if (constraints.maxWidth > constraints.maxHeight) {
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 0, 20),
+                        child: camera,
+                      ),
+                    ),
+                    Expanded(child: guidance),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                    child: SizedBox(
+                      height: (constraints.maxHeight * .42).clamp(
+                        0,
+                        constraints.maxWidth,
+                      ),
+                      child: camera,
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                _guidance(),
-              ],
-            ),
+                  Expanded(child: guidance),
+                ],
+              );
+            },
           ),
         ),
       ],
@@ -168,6 +195,11 @@ class _HomeScreenState extends State<HomeScreen> {
       itemId: _itemId,
       frames: widget.frames,
       procedures: widget.procedures,
+      onTargetChanged: (label) {
+        if (mounted && _focusedPart != label) {
+          setState(() => _focusedPart = label);
+        }
+      },
     );
   }
 }

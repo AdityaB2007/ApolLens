@@ -9,7 +9,8 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({super.key, this.frames});
+  const CameraScreen({super.key, this.frames, this.focusedLabel});
+  final String? focusedLabel;
   final FrameController? frames;
 
   @override
@@ -190,6 +191,7 @@ class _CameraScreenState extends State<CameraScreen>
           child: DetectionOverlay(
             const SizedBox.expand(),
             aligned ? result?.detections ?? [] : [],
+            focusedLabel: widget.focusedLabel,
             frame: aligned ? frame : null,
             geometry: aligned ? result?.geometry : null,
           ),

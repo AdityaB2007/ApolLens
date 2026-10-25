@@ -10,8 +10,10 @@ class DetectionOverlay extends StatelessWidget {
     super.key,
     this.frame,
     this.geometry,
+    this.focusedLabel,
   });
   final Widget child;
+  final String? focusedLabel;
   final List<Detection> boxes;
   final CameraFrame? frame;
   final FrameGeometry? geometry;
@@ -22,14 +24,35 @@ class DetectionOverlay extends StatelessWidget {
         ? null
         : 'Components: ${boxes.map((box) => componentName(box.label)).join(', ')}',
     child: CustomPaint(
-      foregroundPainter: _DetectionPainter(boxes, frame, geometry),
+      foregroundPainter: _DetectionPainter(
+        boxes,
+        frame,
+        geometry,
+        focusedLabel,
+        Theme.of(context).textTheme.labelMedium!.copyWith(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+        MediaQuery.textScalerOf(context),
+      ),
       child: child,
     ),
   );
 }
 
 class _DetectionPainter extends CustomPainter {
-  _DetectionPainter(this.detections, this.frame, this.geometry);
+  _DetectionPainter(
+    this.detections,
+    this.frame,
+    this.geometry,
+    this.focusedLabel,
+    this.labelStyle,
+    this.textScaler,
+  );
+  final String? focusedLabel;
+  final TextStyle labelStyle;
+  final TextScaler textScaler;
   final List<Detection> detections;
   final CameraFrame? frame;
   final FrameGeometry? geometry;
@@ -39,15 +62,16 @@ class _DetectionPainter extends CustomPainter {
     final source = frame;
     final transform = geometry;
     if (source == null || transform == null) return;
-    final paint = Paint()
-      ..color = const Color(0xFFF4C77D)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+    final paint = Paint()..style = PaintingStyle.stroke;
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     for (final detection in detections) {
       final box = transform.mapBox(detection.bounds, source, size);
       if (box == null) continue;
+      final focused = focusedLabel == null || detection.label == focusedLabel;
+      paint
+        ..color = focused ? const Color(0xFF87DDEB) : const Color(0x667C8DAA)
+        ..strokeWidth = focused ? 2.5 : 1;
       canvas.drawRRect(
         RRect.fromRectAndRadius(box, const Radius.circular(4)),
         paint,
@@ -56,14 +80,8 @@ class _DetectionPainter extends CustomPainter {
         maxLines: 1,
         ellipsis: '…',
         textDirection: TextDirection.ltr,
-        text: TextSpan(
-          text: componentName(detection.label),
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
+        textScaler: textScaler,
+        text: TextSpan(text: componentName(detection.label), style: labelStyle),
       )..layout(maxWidth: (size.width - 16).clamp(1, size.width));
       final origin = Offset(
         box.left.clamp(0, (size.width - label.width - 12).clamp(0, size.width)),
@@ -77,7 +95,8 @@ class _DetectionPainter extends CustomPainter {
           origin & Size(label.width + 12, label.height + 6),
           const Radius.circular(4),
         ),
-        Paint()..color = const Color(0xE6202923),
+        Paint()
+          ..color = focused ? const Color(0xF01C3046) : const Color(0xC011162A),
       );
       label.paint(canvas, origin + const Offset(6, 3));
     }

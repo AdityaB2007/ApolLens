@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:apollens/main.dart';
+import 'package:apollens/screens/camera_screen.dart';
 import 'package:apollens/models/repair_decision.dart';
 import 'package:apollens/models/repair_progress.dart';
 import 'package:apollens/widgets/repair_plan_panel.dart';
@@ -135,6 +136,47 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     speech.dispose();
   });
+
+  for (final size in [const Size(390, 844), const Size(320, 568)]) {
+    testWidgets(
+      'camera stays visible while guidance scrolls at ${size.width}',
+      (tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          ApolLensApp(
+            localAssistant: LocalRepairAssistant(runtime: _TestModelRuntime()),
+            offlineSpeech: OfflineSpeechService(),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final before = tester.getRect(find.byType(CameraScreen));
+        await tester.drag(
+          find.byType(SingleChildScrollView).last,
+          const Offset(0, -250),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.getRect(find.byType(CameraScreen)), before);
+        expect(
+          tester
+              .state<ScrollableState>(find.byType(Scrollable).last)
+              .position
+              .pixels,
+          greaterThan(0),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
 
   testWidgets('wires the local assistant into the camera-first app', (
     tester,

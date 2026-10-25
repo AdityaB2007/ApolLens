@@ -23,6 +23,7 @@ class LocalAssistantPanel extends StatefulWidget {
     required this.itemId,
     this.frames,
     this.procedures,
+    this.onTargetChanged,
   });
 
   final LocalRepairAssistant assistant;
@@ -30,6 +31,7 @@ class LocalAssistantPanel extends StatefulWidget {
   final String? itemId;
   final FrameController? frames;
   final ProcedureService? procedures;
+  final ValueChanged<String?>? onTargetChanged;
 
   @override
   State<LocalAssistantPanel> createState() => _LocalAssistantPanelState();
@@ -137,6 +139,19 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
     setState(() {});
   }
 
+  void _publishFocus() {
+    final label = switch (_progress?.decision.target) {
+      RepairTarget.storage => 'storage_drive',
+      RepairTarget.ram => 'ram_module',
+      RepairTarget.fan => 'cooling_fan',
+      RepairTarget.battery => 'main_battery',
+      _ => null,
+    };
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onTargetChanged?.call(label);
+    });
+  }
+
   void _resetConversation() {
     _conversation++;
     _observed.clear();
@@ -147,6 +162,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
     _question = null;
     _notice = null;
     _reportedProblem = '';
+    _publishFocus();
     _awaitingSymptoms = false;
     _symptoms.clear();
     unawaited(widget.assistant.cancel());
@@ -229,6 +245,7 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
         _awaitingSymptoms = false;
         _symptoms.clear();
       });
+      _publishFocus();
     } catch (_) {
       if (mounted && conversation == _conversation) {
         setState(

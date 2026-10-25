@@ -55,7 +55,11 @@ class ComponentDataset(Dataset):
     def __getitem__(self, index):
         record, coordinates, classes = self.items[index]
         with Image.open(self.root / record["file_name"]) as original:
-            image = ImageOps.exif_transpose(original).convert("RGB").resize((320, 320))
+            image = (
+                ImageOps.exif_transpose(original)
+                .convert("RGB")
+                .resize((320, 320), Image.Resampling.BILINEAR)
+            )
         boxes = torch.tensor(coordinates, dtype=torch.float32).reshape(-1, 4)
         if self.augment:
             image = ImageEnhance.Brightness(image).enhance(random.uniform(0.8, 1.2))
@@ -87,6 +91,7 @@ def main():
         action="store_true",
         help="Download official COCO initialization during training.",
     )
+    parser.add_argument("--fine-tune", action="store_true")
     args = parser.parse_args()
     if args.epochs < 1 or args.output.exists():
         parser.error("Use positive epochs and a new output directory.")
@@ -114,6 +119,12 @@ def main():
     args.output.mkdir(parents=True)
     history = []
     for epoch in range(args.epochs):
+        if args.fine_tune and epoch == args.epochs // 2:
+            for parameter in model.backbone.parameters():
+                parameter.requires_grad_(True)
+            optimizer.add_param_group(
+                {"params": model.backbone.parameters(), "lr": 0.0001}
+            )
         model.train()
         model.backbone.eval()
         for module in model.modules():
@@ -137,6 +148,7 @@ def main():
             "classes": dataset.classes,
             "seed": args.seed,
             "epochs": args.epochs,
+            "fine_tune": args.fine_tune,
         },
         args.output / "detector.pt",
     )

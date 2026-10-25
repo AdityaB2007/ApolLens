@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "architecture": "ssdlite320_mobilenet_v3_large",
-  "sha256": "6967f97b3a4b2bef04c5fb55f5b8459a0f270f45167de22286c2de2422c5d089",
+  "architecture": "yolox_nano",
+  "sha256": "27107173e41e7767059e3e8a5cbd0ff649eef886538932f72697d472d49bfbc9",
   "classes": [
     "__background__",
     "main_battery",
@@ -15,18 +15,19 @@
     "shape": [
       1,
       3,
-      320,
-      320
+      640,
+      640
     ],
     "color": "RGB",
     "range": [
       0,
       1
     ],
-    "resize": "bilinear stretch upright image"
+    "resize": "letterbox",
+    "padding": 114
   },
   "outputs": {
-    "boxes": "upright_normalized_xyxy",
+    "boxes": "letterbox_normalized_xyxy",
     "scores": "float32",
     "labels": "int64 indices into classes"
   },

@@ -79,8 +79,8 @@ Production build and lint:
 
 - **Gavin Couch:** Flutter application, local language-model integration, computer-vision training and mobile integration, UI development, and device testing.
 - **Aditya Baisakh:** React dashboard and reusable web components, dataset validation tooling, and text-to-speech improvements.
-- **Indi:** Backend API development, authentication, and online voice-service integration.
-- **Eric:** Image collection and dataset preparation, with model-training support.
+- **Indigo Brown:** Backend API development, authentication, and online voice-service integration.
+- **Eric Chau:** Image collection and dataset preparation, with model-training support.
 
 ## AI assistance disclosure
 

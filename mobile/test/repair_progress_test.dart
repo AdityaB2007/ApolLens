@@ -2,6 +2,7 @@ import 'package:apollens/models/repair_decision.dart';
 import 'package:apollens/models/repair_progress.dart';
 import 'package:apollens/services/storage_repair_guide.dart';
 import 'package:apollens/services/ram_repair_guide.dart';
+import 'package:apollens/services/laptop_repair_guide.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -99,6 +100,38 @@ void main() {
       expect(ramReplacementCard(progress).id, 'ram_finish');
     });
   }
+
+  test('replacement bypasses diagnosis and cannot replay stale checks', () {
+    progress.decision = const RepairDecision(
+      intent: RepairIntent.diagnose,
+      target: RepairTarget.storage,
+      issue: RepairIssue.bootMissing,
+      evidence: 'boot device not found',
+    );
+    final diagnosis = nextLaptopRepairCard(progress);
+    expect(diagnosis.id, 'firmware_drive');
+    expect(
+      confirmLaptopRepairCard(
+        progress,
+        diagnosis,
+        choice: RepairFact.drivePresent,
+      ),
+      isTrue,
+    );
+    final check = nextLaptopRepairCard(progress);
+    expect(check.id, 'boot_entry');
+    confirmLaptopRepairCard(progress, check);
+    expect(nextLaptopRepairCard(progress).id, 'boot_recovery');
+    progress.decision = const RepairDecision(
+      intent: RepairIntent.replace,
+      target: RepairTarget.storage,
+      issue: RepairIssue.bootMissing,
+      evidence: 'replace the drive',
+    );
+    expect(nextLaptopRepairCard(progress).id, 'prepare_data');
+    expect(confirmLaptopRepairCard(progress, check), isFalse);
+    expect(progress.completedActions, contains('boot_entry'));
+  });
 
   test('manual actions are recorded once with stable IDs', () {
     const card = RepairCard(

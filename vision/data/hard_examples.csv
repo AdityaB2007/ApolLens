@@ -1,0 +1,12 @@
+file_name,parent,crop_xyxy,boxes_pixel_xywh,group_id,split,reviewer
+hard-error-001.png,commons-170471213.jpg,"[186, 622, 647, 1841]","[{""category_id"": 1, ""bbox"": [43.120000000000005, 190.15999999999997, 376.32000000000005, 844.8000000000001]}]",public-170471213,train,Codex visual review; not independent ground truth
+hard-error-002.png,commons-140800940.jpg,"[0, 132, 1280, 784]",[],pny-cs3030,train,Codex visual review; not independent ground truth
+hard-error-003.png,public-171808652.png,"[338, 0, 1087, 681]",[],s76-darter,train,Codex visual review; not independent ground truth
+hard-error-004.png,public-171808783.png,"[315, 34, 963, 815]",[],s76-darter,train,Codex visual review; not independent ground truth
+hard-error-005.png,public-69748446.png,"[276, 15, 933, 624]",[],negative-69748446,train,Codex visual review; not independent ground truth
+hard-error-006.png,public-45376773.png,"[93, 170, 1280, 1186]",[],atheros-ar5b93,train,Codex visual review; not independent ground truth
+hard-error-007.png,public-45376777.png,"[361, 278, 987, 871]",[],atheros-ar5b93,train,Codex visual review; not independent ground truth
+hard-error-008.png,public-88712556.png,"[56, 371, 1084, 1021]",[],atheros-ar5b93,train,Codex visual review; not independent ground truth
+hard-error-009.png,public-137701475.png,"[0, 0, 947, 973]",[],intel-ax210,train,Codex visual review; not independent ground truth
+hard-error-010.png,public-137701474.png,"[0, 151, 900, 820]",[],intel-ax210,train,Codex visual review; not independent ground truth
+hard-error-011.png,public-177591838.png,"[685, 642, 1073, 1092]",[],intel-ax210,train,Codex visual review; not independent ground truth

@@ -5,8 +5,9 @@ import torch
 from PIL import Image
 
 
-def focus_crop(image, boxes, labels, size=320):
-    candidates = torch.where(labels >= 3)[0].tolist()
+def focus_crop(image, boxes, labels, size=320, all_components=False):
+    eligible = labels > 0 if all_components else labels >= 3
+    candidates = torch.where(eligible)[0].tolist()
     if not candidates:
         return image, boxes, labels
     selected = boxes[random.choice(candidates)]

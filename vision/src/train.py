@@ -3,13 +3,14 @@ import argparse
 import json
 import math
 import random
+from collections import Counter
 from pathlib import Path
 
 import torch
 from augment import focus_crop, rotate_quarter
 from image_geometry import letterbox
 from PIL import Image, ImageEnhance, ImageOps
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 from torchvision.models.detection import ssdlite320_mobilenet_v3_large
 from torchvision.models.detection.anchor_utils import DefaultBoxGenerator
 from torchvision.transforms.functional import pil_to_tensor
@@ -63,6 +64,7 @@ class ComponentDataset(Dataset):
         focus_crops=False,
         image_size=320,
         letterboxed=False,
+        balanced_crops=False,
     ):
         self.root = Path(images)
         self.classes = ["__background__"] + [c["name"] for c in labels["categories"]]
@@ -72,6 +74,7 @@ class ComponentDataset(Dataset):
         self.focus_crops = focus_crops
         self.image_size = image_size
         self.letterboxed = letterboxed
+        self.balanced_crops = balanced_crops
         for image in labels["images"]:
             if provenance[image["file_name"]]["split"] != split:
                 continue
@@ -105,6 +108,7 @@ class ComponentDataset(Dataset):
                 boxes,
                 classes,
                 size=None if self.letterboxed else self.image_size,
+                all_components=self.balanced_crops,
             )
         if not self.letterboxed:
             image = image.resize(
@@ -131,6 +135,12 @@ class ComponentDataset(Dataset):
         }
 
 
+def sampling_weights(dataset):
+    present = [set(labels) or {0} for _, _, labels in dataset.items]
+    counts = Counter(label for labels in present for label in labels)
+    return [max(1 / counts[label] for label in labels) for labels in present]
+
+
 def save_checkpoint(model, classes, args, epochs, path):
     torch.save(
         {
@@ -141,6 +151,7 @@ def save_checkpoint(model, classes, args, epochs, path):
             "seed": args.seed,
             "epochs": epochs,
             "fine_tune": args.fine_tune,
+            "balance_classes": args.balance_classes,
             "unfreeze_epoch": args.unfreeze_epoch,
             "focus_crops": args.focus_crops,
             "learning_rate": args.learning_rate,
@@ -177,6 +188,7 @@ def main():
     parser.add_argument("--fine-tune", action="store_true")
     parser.add_argument("--unfreeze-epoch", type=int)
     parser.add_argument("--focus-crops", action="store_true")
+    parser.add_argument("--balance-classes", action="store_true")
     parser.add_argument("--image-size", type=int, choices=(320, 640), default=320)
     parser.add_argument("--small-anchors", action="store_true")
     parser.add_argument("--letterbox", action="store_true")
@@ -211,11 +223,19 @@ def main():
         focus_crops=args.focus_crops,
         image_size=args.image_size,
         letterboxed=args.letterbox,
+        balanced_crops=args.balance_classes,
     )
     if len(dataset) < 2:
         parser.error("At least two reviewed training images are required.")
+    sampler = None
+    if args.balance_classes:
+        sampler = WeightedRandomSampler(sampling_weights(dataset), len(dataset))
     loader = DataLoader(
-        dataset, batch_size=4, shuffle=True, collate_fn=lambda batch: tuple(zip(*batch))
+        dataset,
+        batch_size=4,
+        shuffle=sampler is None,
+        sampler=sampler,
+        collate_fn=lambda batch: tuple(zip(*batch)),
     )
     model = build_model(
         dataset.classes, args.pretrained, args.image_size, args.small_anchors

@@ -67,68 +67,106 @@ class _GalaxyBackgroundState extends State<GalaxyBackground>
 class _GalaxyPainter extends CustomPainter {
   _GalaxyPainter(this.motion) : super(repaint: motion);
   final Animation<double> motion;
-  static final _stars = _makeStars();
-  static final _arms = _makeArms();
-  static final _core = _arms.where((point) => point.distance < .45).toList();
+  static final _random = math.Random(41);
+  static final _stars = List.generate(
+    220,
+    (_) => Offset(_random.nextDouble(), _random.nextDouble()),
+  );
+  // Record the nebula once; moving it never regenerates its geometry or shaders.
+  static final Picture _galaxy = _recordGalaxy();
 
-  static List<Offset> _makeStars() {
-    final random = math.Random(41);
-    return List.generate(
-      110,
-      (_) => Offset(random.nextDouble(), random.nextDouble()),
-    );
-  }
-
-  static List<Offset> _makeArms() {
+  static Picture _recordGalaxy() {
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
     final random = math.Random(17);
-    return List.generate(700, (index) {
-      final radius = math.pow(random.nextDouble(), .7).toDouble();
-      final angle =
-          radius * 7 +
-          (index.isEven ? 0 : math.pi) +
-          (random.nextDouble() - .5) * .65;
-      return Offset(math.cos(angle) * radius, math.sin(angle) * radius);
-    });
+    void glow(Offset center, double radius, Color color) {
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [color, color.withValues(alpha: 0)],
+          ).createShader(Rect.fromCircle(center: center, radius: radius)),
+      );
+    }
+
+    glow(Offset.zero, 1.25, const Color(0x252E1F75));
+    for (var arm = 0; arm < 3; arm++) {
+      for (var i = 0; i < 48; i++) {
+        final radius = .1 + i / 45;
+        final angle = radius * 5.2 + arm * math.pi * 2 / 3;
+        final point = Offset(math.cos(angle), math.sin(angle)) * radius;
+        final clump =
+            point +
+            Offset(
+              (random.nextDouble() - .5) * .13,
+              (random.nextDouble() - .5) * .13,
+            );
+        glow(clump, .08 + random.nextDouble() * .12, const Color(0x307B4EC0));
+        glow(clump, .035 + radius * .05, const Color(0x385394C4));
+        if (i % 4 == 0) {
+          glow(clump, .04, const Color(0x40B86EAD));
+        }
+      }
+    }
+    final clusters = [<Offset>[], <Offset>[], <Offset>[]];
+    for (var i = 0; i < 2600; i++) {
+      final radius = math.pow(random.nextDouble(), .65).toDouble() * 1.15;
+      final angle = radius * 5.2 + (i % 3) * math.pi * 2 / 3;
+      final scatter = (random.nextDouble() - .5) * .3;
+      clusters[i % 3].add(
+        Offset(math.cos(angle + scatter), math.sin(angle + scatter)) * radius,
+      );
+    }
+    for (var i = 0; i < clusters.length; i++) {
+      canvas.drawPoints(
+        PointMode.points,
+        clusters[i],
+        Paint()
+          ..color = [
+            const Color(0x806DA8E0),
+            const Color(0x70C2A7EF),
+            const Color(0xA0EAE2FF),
+          ][i]
+          ..strokeWidth = i == 2 ? .003 : .005
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+    glow(Offset.zero, .4, const Color(0xC0A38ACB));
+    glow(Offset.zero, .18, const Color(0xE0F3D9BB));
+    glow(Offset.zero, .055, const Color(0xFFFFF1DB));
+    return recorder.endRecording();
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawColor(const Color(0xFF0A101B), BlendMode.src);
-    final stars = Paint()..color = const Color(0x70D6E1ED);
+    canvas.drawColor(const Color(0xFF060816), BlendMode.src);
+    final haze = Paint()
+      ..shader =
+          const RadialGradient(
+            colors: [Color(0xFF20224B), Color(0x00060816)],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width, size.height * .8),
+              radius: size.longestSide * .8,
+            ),
+          );
+    canvas.drawRect(Offset.zero & size, haze);
+    final stars = Paint();
     for (var i = 0; i < _stars.length; i++) {
       final star = _stars[i];
-      canvas.drawCircle(
-        Offset(star.dx * size.width, star.dy * size.height),
-        i % 9 == 0 ? 1 : .5,
-        stars,
-      );
+      stars.color = i % 7 == 0
+          ? const Color(0xD0ECEAFF)
+          : const Color(0x707DA3D1);
+      final center = Offset(star.dx * size.width, star.dy * size.height);
+      canvas.drawCircle(center, i % 11 == 0 ? 1.2 : .55, stars);
     }
     canvas.save();
-    canvas.translate(size.width * .78, size.height * .25);
-    canvas.rotate(-.5);
-    canvas.scale(size.width * .95, size.width * .42);
+    canvas.translate(size.width * .15, size.height * .87);
+    canvas.rotate(-.65);
+    canvas.scale(size.longestSide * .65, size.longestSide * .32);
     canvas.rotate(motion.value * math.pi * 2);
-    canvas.drawPoints(
-      PointMode.points,
-      _arms,
-      Paint()
-        ..color = const Color(0x506F8AA6)
-        ..strokeWidth = .006
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.drawPoints(
-      PointMode.points,
-      _core,
-      Paint()
-        ..color = const Color(0x65C0C9CB)
-        ..strokeWidth = .009
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.drawCircle(
-      Offset.zero,
-      .025,
-      Paint()..color = const Color(0x70D8D5BF),
-    );
+    canvas.drawPicture(_galaxy);
     canvas.restore();
   }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:apollens/main.dart';
+import 'package:apollens/widgets/galaxy_background.dart';
 import 'package:apollens/services/local_repair_assistant.dart';
 import 'package:apollens/services/offline_speech_service.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +36,42 @@ void main() {
         .setMockMethodCallHandler(speechChannel, null);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(cameraChannel, null);
+  });
+
+  testWidgets('galaxy pauses with lifecycle and reduced motion', (
+    tester,
+  ) async {
+    Widget scene(bool reduced) => MaterialApp(
+      home: MediaQuery(
+        data: MediaQueryData(disableAnimations: reduced),
+        child: const GalaxyBackground(),
+      ),
+    );
+    await tester.pumpWidget(scene(false));
+    await tester.pump(const Duration(seconds: 1));
+    final dynamic painter = tester
+        .widget<CustomPaint>(
+          find.descendant(
+            of: find.byType(GalaxyBackground),
+            matching: find.byType(CustomPaint),
+          ),
+        )
+        .painter;
+    expect(painter.motion.value, greaterThan(0));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    final paused = painter.motion.value;
+    await tester.pump(const Duration(seconds: 2));
+    expect(painter.motion.value, paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(painter.motion.value, greaterThan(paused));
+    await tester.pumpWidget(scene(true));
+    final reduced = painter.motion.value;
+    await tester.pump(const Duration(seconds: 3));
+    expect(painter.motion.value, reduced);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('wires the local assistant into the camera-first app', (

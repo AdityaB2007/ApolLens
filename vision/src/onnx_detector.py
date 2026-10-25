@@ -109,20 +109,21 @@ class OnnxDetector:
         self.classes, self.threshold, self.max_results = classes, threshold, max_results
 
     def detect(self, image_path: Path):
+        with Image.open(image_path) as original:
+            return self.detect_image(original)
+
+    def detect_image(self, original: Image.Image):
         if self._session is None:
             raise RuntimeError("Detector is closed.")
-        with Image.open(image_path) as original:
-            image = ImageOps.exif_transpose(original).convert("RGB")
-            width, height = image.size
-            if self.letterboxed:
-                resized, geometry = letterbox(image, self.image_size)
-            else:
-                resized = image.resize(
-                    (self.image_size, self.image_size), Image.Resampling.BILINEAR
-                )
-            tensor = (
-                np.asarray(resized, dtype=np.float32).transpose(2, 0, 1)[None] / 255
+        image = ImageOps.exif_transpose(original).convert("RGB")
+        width, height = image.size
+        if self.letterboxed:
+            resized, geometry = letterbox(image, self.image_size)
+        else:
+            resized = image.resize(
+                (self.image_size, self.image_size), Image.Resampling.BILINEAR
             )
+        tensor = np.asarray(resized, dtype=np.float32).transpose(2, 0, 1)[None] / 255
         boxes, scores, labels = self._session.run(
             ["boxes", "scores", "labels"], {"images": tensor}
         )

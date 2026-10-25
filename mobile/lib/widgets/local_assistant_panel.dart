@@ -514,7 +514,25 @@ class _LocalAssistantPanelState extends State<LocalAssistantPanel>
                   onPressed: widget.speech.replay,
                   child: const Text('Replay voice'),
                 ),
-              if (widget.speech.status == OfflineSpeechStatus.speaking)
+              if (widget.speech.status == OfflineSpeechStatus.speaking ||
+                  widget.speech.status == OfflineSpeechStatus.paused)
+                TextButton.icon(
+                  onPressed: widget.speech.status == OfflineSpeechStatus.paused
+                      ? widget.speech.resume
+                      : widget.speech.pause,
+                  icon: Icon(
+                    widget.speech.status == OfflineSpeechStatus.paused
+                        ? Icons.play_arrow
+                        : Icons.pause,
+                  ),
+                  label: Text(
+                    widget.speech.status == OfflineSpeechStatus.paused
+                        ? 'Resume voice'
+                        : 'Pause voice',
+                  ),
+                ),
+              if (widget.speech.status == OfflineSpeechStatus.speaking ||
+                  widget.speech.status == OfflineSpeechStatus.paused)
                 TextButton(
                   onPressed: widget.speech.stop,
                   child: const Text('Stop voice'),

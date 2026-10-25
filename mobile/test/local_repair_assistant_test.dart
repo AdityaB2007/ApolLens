@@ -454,6 +454,20 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
             calls.add(call);
+            if (call.method == 'speak') {
+              scheduleMicrotask(() {
+                TestDefaultBinaryMessengerBinding
+                    .instance
+                    .defaultBinaryMessenger
+                    .handlePlatformMessage(
+                      'flutter_tts',
+                      const StandardMethodCodec().encodeMethodCall(
+                        const MethodCall('speak.onComplete'),
+                      ),
+                      (_) {},
+                    );
+              });
+            }
             return switch (call.method) {
               'getVoices' => [
                 {

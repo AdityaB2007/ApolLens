@@ -1,7 +1,6 @@
 // Aditya: Procedure editing and reference image management in React.
 import type { Procedure, ProcedureStep } from "../services/api";
 
-
 type ProceduresProps = {
   procedures: Procedure[];
   activeProcedureId: string;
@@ -10,7 +9,6 @@ type ProceduresProps = {
   onAddProcedure: () => void;
 };
 
-
 function Procedures({
   procedures,
   activeProcedureId,
@@ -18,10 +16,9 @@ function Procedures({
   onUpdateProcedure,
   onAddProcedure,
 }: ProceduresProps) {
-  const procedure = procedures.find((item) => item.id === activeProcedureId);
+  const selected = procedures.find((item) => item.id === activeProcedureId);
 
-
-  if (!procedure) {
+  if (!selected) {
     return (
       <div className="page-content">
         <section className="panel">
@@ -34,40 +31,37 @@ function Procedures({
     );
   }
 
+  const procedure = selected;
 
   function updateDetails(
     changes: Partial<Pick<Procedure, "name" | "equipment" | "description">>,
   ) {
-    onUpdateProcedure({ ...procedure!, ...changes });
+    onUpdateProcedure({ ...procedure, ...changes });
   }
-
 
   function updateStep(stepId: string, changes: Partial<ProcedureStep>) {
     onUpdateProcedure({
-      ...procedure!,
-      steps: procedure!.steps.map((step) =>
+      ...procedure,
+      steps: procedure.steps.map((step) =>
         step.id === stepId ? { ...step, ...changes } : step,
       ),
     });
   }
 
-
   function addStep() {
     const newStep: ProcedureStep = {
-      id: `step-${Date.now()}`,
+      id: crypto.randomUUID(),
       title: "New maintenance step",
       instructions: "Add the instructions for this step.",
       referenceImageUrl: "",
       estimatedMinutes: 1,
     };
 
-
     onUpdateProcedure({
       ...procedure,
       steps: [...procedure.steps, newStep],
     });
   }
-
 
   function removeStep(stepId: string) {
     onUpdateProcedure({
@@ -76,13 +70,10 @@ function Procedures({
     });
   }
 
-
   function moveStep(index: number, direction: -1 | 1) {
     const destination = index + direction;
 
-
     if (destination < 0 || destination >= procedure.steps.length) return;
-
 
     const updatedSteps = [...procedure.steps];
     [updatedSteps[index], updatedSteps[destination]] = [
@@ -90,28 +81,24 @@ function Procedures({
       updatedSteps[index],
     ];
 
-
     onUpdateProcedure({ ...procedure, steps: updatedSteps });
   }
-
 
   return (
     <div className="page-content">
       <section className="welcome-row">
         <div>
           <p className="eyebrow">PROCEDURE MANAGEMENT</p>
-          <h3>Build a clear maintenance workflow.</h3>
+          <h3>Your procedure drafts</h3>
           <p className="muted">
             Edit the instructions and reference images used to guide a session.
           </p>
         </div>
 
-
         <button className="button" onClick={onAddProcedure}>
           + New procedure
         </button>
       </section>
-
 
       <div className="editor-layout">
         <aside className="panel procedure-library">
@@ -122,7 +109,6 @@ function Procedures({
             </div>
             <span className="step-count">{procedures.length}</span>
           </div>
-
 
           {procedures.map((item) => (
             <button
@@ -139,7 +125,6 @@ function Procedures({
           ))}
         </aside>
 
-
         <section className="panel editor-panel">
           <div className="panel-heading editor-heading">
             <div>
@@ -149,17 +134,15 @@ function Procedures({
             <span className="status status-pending">Local draft</span>
           </div>
 
-
           <div className="form-field">
             <label htmlFor="procedure-name">Procedure name</label>
             <input
               id="procedure-name"
               value={procedure.name}
               onChange={(event) => updateDetails({ name: event.target.value })}
-              placeholder="e.g. HEPA Filter Maintenance"
+              placeholder="Procedure name"
             />
           </div>
-
 
           <div className="form-field">
             <label htmlFor="procedure-equipment">Equipment</label>
@@ -172,7 +155,6 @@ function Procedures({
               placeholder="Equipment name"
             />
           </div>
-
 
           <div className="form-field">
             <label htmlFor="procedure-description">Description</label>
@@ -187,7 +169,6 @@ function Procedures({
             />
           </div>
 
-
           <div className="steps-heading">
             <div>
               <p className="eyebrow">WORKFLOW</p>
@@ -197,7 +178,6 @@ function Procedures({
               + Add step
             </button>
           </div>
-
 
           {procedure.steps.map((step, index) => (
             <article className="editor-step" key={step.id}>
@@ -230,7 +210,6 @@ function Procedures({
                 </button>
               </div>
 
-
               <div className="form-field">
                 <label htmlFor={`${step.id}-title`}>Step title</label>
                 <input
@@ -241,7 +220,6 @@ function Procedures({
                   }
                 />
               </div>
-
 
               <div className="form-field">
                 <label htmlFor={`${step.id}-instructions`}>Instructions</label>
@@ -255,9 +233,10 @@ function Procedures({
                 />
               </div>
 
-
               <div className="form-field">
-                <label htmlFor={`${step.id}-image`}>Reference image URL (optional)</label>
+                <label htmlFor={`${step.id}-image`}>
+                  Reference image URL (optional)
+                </label>
                 <input
                   id={`${step.id}-image`}
                   type="url"
@@ -278,7 +257,6 @@ function Procedures({
                   </div>
                 )}
               </div>
-
 
               <div className="form-field compact-field">
                 <label htmlFor={`${step.id}-duration`}>
@@ -302,23 +280,20 @@ function Procedures({
             </article>
           ))}
 
-
           {procedure.steps.length === 0 && (
             <p className="empty-state">
               This procedure has no steps yet. Add one to get started.
             </p>
           )}
 
-
           <p className="note">
-            Draft changes are held in application memory only. They are not
-            saved to the backend and will reset when the app reloads.
+            Drafts are saved in this browser. They are not synchronized with the
+            phone or a server.
           </p>
         </section>
       </div>
     </div>
   );
 }
-
 
 export default Procedures;

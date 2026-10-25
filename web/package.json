@@ -1,5 +1,5 @@
 {
-  "name": "web-temp",
+  "name": "apollens-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --experimental-strip-types --test src/services/*.test.ts"
   },
   "dependencies": {
     "react": "^19.3.1",
@@ -26,5 +27,8 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.2",
     "vite": "^6.4.5"
+  },
+  "engines": {
+    "node": ">=22.6.0"
   }
 }

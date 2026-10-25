@@ -1,7 +1,7 @@
 // Aditya: Live repair sessions, inspection results, and progress in the React dashboard.
 import InspectionFeed from "../components/InspectionFeed";
-import type { Inspection, Procedure } from "../services/api";
-
+import type { Procedure } from "../services/api";
+import type { Observation } from "../components/InspectionFeed";
 
 type DashboardProps = {
   procedure: Procedure;
@@ -10,13 +10,9 @@ type DashboardProps = {
   onSelectProcedure: (id: string) => void;
   completedStepIds: string[];
   onToggleStep: (id: string) => void;
-  inspections: Inspection[];
-  onReviewInspection: (
-    id: string,
-    status: "confirmed" | "flagged",
-  ) => void;
+  inspections: Observation[];
+  onReviewInspection: (id: string, status: "confirmed" | "flagged") => void;
 };
-
 
 function Dashboard({
   procedure,
@@ -35,29 +31,22 @@ function Dashboard({
   const progress =
     steps.length === 0 ? 0 : Math.round((completedCount / steps.length) * 100);
 
-
-  const currentStep = steps.find(
-    (step) => !completedStepIds.includes(step.id),
-  );
-
+  const currentStep = steps.find((step) => !completedStepIds.includes(step.id));
 
   const pendingCount = inspections.filter(
     (inspection) => inspection.reviewStatus === "pending",
   ).length;
 
-
   return (
     <div className="page-content">
       <section className="welcome-row">
         <div>
-          <p className="eyebrow">MAINTENANCE WORKSPACE</p>
-          <h3>Keep every step in view.</h3>
+          <p className="eyebrow">LOCAL WORKSPACE</p>
+          <h3>Session progress</h3>
           <p className="muted">
-            Follow the procedure, review camera observations, and confirm each
-            completed action.
+            Review your draft and record the steps you complete.
           </p>
         </div>
-
 
         <label className="procedure-selector">
           <span>Active procedure</span>
@@ -74,7 +63,6 @@ function Dashboard({
         </label>
       </section>
 
-
       <section className="stat-grid">
         <article className="stat-card">
           <span className="stat-label">Step progress</span>
@@ -84,13 +72,11 @@ function Dashboard({
           </span>
         </article>
 
-
         <article className="stat-card">
           <span className="stat-label">Observations</span>
           <strong>{inspections.length}</strong>
-          <span className="stat-detail">Sample camera events</span>
+          <span className="stat-detail">Received observations</span>
         </article>
-
 
         <article className="stat-card">
           <span className="stat-label">Awaiting review</span>
@@ -98,7 +84,6 @@ function Dashboard({
           <span className="stat-detail">Observations to review</span>
         </article>
       </section>
-
 
       <div className="dashboard-grid">
         <section className="panel procedure-panel">
@@ -113,11 +98,16 @@ function Dashboard({
             </span>
           </div>
 
-
-          <div className="progress-track">
+          <div
+            className="progress-track"
+            role="progressbar"
+            aria-label="Steps confirmed"
+            aria-valuenow={completedCount}
+            aria-valuemin={0}
+            aria-valuemax={Math.max(1, steps.length)}
+          >
             <div className="progress-fill" style={{ width: `${progress}%` }} />
           </div>
-
 
           {currentStep ? (
             <div className="current-step">
@@ -128,6 +118,8 @@ function Dashboard({
                 Estimated time: {currentStep.estimatedMinutes} min
               </span>
             </div>
+          ) : steps.length === 0 ? (
+            <p className="empty-state">Add steps in Procedures to begin.</p>
           ) : (
             <div className="completion-message">
               <span className="completion-icon">✓</span>
@@ -138,12 +130,10 @@ function Dashboard({
             </div>
           )}
 
-
           <div className="step-list">
             {steps.map((step, index) => {
               const isComplete = completedStepIds.includes(step.id);
               const isCurrent = currentStep?.id === step.id;
-
 
               return (
                 <article
@@ -156,7 +146,6 @@ function Dashboard({
                     {isComplete ? "✓" : index + 1}
                   </span>
 
-
                   <div className="step-info">
                     <strong>{step.title}</strong>
                     <span>
@@ -167,7 +156,6 @@ function Dashboard({
                           : "Not yet confirmed"}
                     </span>
                   </div>
-
 
                   <button
                     className={`button button-small ${isComplete ? "button-secondary" : ""}`}
@@ -180,13 +168,11 @@ function Dashboard({
             })}
           </div>
 
-
           <p className="note">
-            Step completion is controlled by the user. Detector observations
-            do not automatically complete steps.
+            Step completion is controlled by the user. Detector observations do
+            not automatically complete steps.
           </p>
         </section>
-
 
         <div className="right-column">
           <section className="panel camera-panel">
@@ -198,22 +184,21 @@ function Dashboard({
               <span className="status status-pending">Not connected</span>
             </div>
 
-
             <div className="camera-placeholder">
               <div className="camera-symbol">◎</div>
-              <strong>Camera feed will appear here</strong>
+              <strong>Use ApolLens on your phone</strong>
               <p>
-                The Flutter app and vision service are not connected to this
-                demo dashboard yet.
+                Camera images and local AI stay on the phone. This browser
+                workspace is for your own procedure drafts.
               </p>
             </div>
 
-
             <div className="camera-legend">
-              <span><i className="legend-dot" /> Sample detections below</span>
+              <span>
+                <i className="legend-dot" /> Live detection runs on the phone
+              </span>
             </div>
           </section>
-
 
           <section className="panel">
             <div className="panel-heading">
@@ -224,9 +209,8 @@ function Dashboard({
               <span className="step-count">{inspections.length}</span>
             </div>
 
-
             <InspectionFeed
-              inspections={inspections}
+              observations={inspections}
               onReview={onReviewInspection}
             />
           </section>
@@ -235,6 +219,5 @@ function Dashboard({
     </div>
   );
 }
-
 
 export default Dashboard;

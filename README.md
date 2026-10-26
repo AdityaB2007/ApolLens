@@ -94,8 +94,8 @@ The `vision/` directory contains dataset preparation, training, evaluation, and 
 
 - **Gavin Couch:** Flutter application, local language-model integration, computer-vision training and mobile integration, UI development, and device testing.
 - **Aditya Baisakh:** React dashboard and reusable web components, dataset validation tooling, and text-to-speech improvements.
-- **Indigo Brown:** Backend API development, authentication, and online voice-service integration.
 - **Eric Chau:** Image collection and dataset preparation, with model-training support.
+- **Indigo Brown:** Backend API development, authentication, and online voice-service integration.
 
 ## AI assistance disclosure
 
@@ -116,3 +116,6 @@ Live camera operation has been confirmed on the development iPhone. The revised 
 The project uses third-party models, datasets, libraries, and imagery. See the included model cards, license files, and notices for attribution and usage details.
 
 Whirlpool Galaxy M51 image: NASA, ESA, S. Beckwith (STScI), and The Hubble Heritage Team (STScI/AURA), from [ESA/Hubble](https://esahubble.org/images/heic0506a/), used under [CC BY 4.0](https://esahubble.org/copyright/). The app presents a crop and animation and includes the attribution offline. No NASA or ESA endorsement is implied.
+
+## Presentation Link
+Feel free to view our presentation here! : [Link](https://docs.google.com/presentation/d/1EFC7ZZD0hXRFcot35KNYO3bxi_sgULUzy2CbTzwGbvU/edit?slide=id.h4ea6fe05bf18c190_0_0#slide=id.h4ea6fe05bf18c190_0_0)
